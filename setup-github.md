@@ -34,10 +34,32 @@ Features:
 
 ### 5. Add remote and push
 ```bash
-# Replace 'yourusername' with your GitHub username
+# Replace 'yourusername' with your actual GitHub username
 git remote add origin https://github.com/yourusername/smartbooks.git
 git branch -M main
 git push -u origin main
+```
+
+## ⚠️ Troubleshooting
+
+### "Repository not found" error
+This means either:
+1. You haven't created the GitHub repository yet
+2. The username in the URL is incorrect
+3. The repository name is different
+
+**Solution:**
+1. First create the repository on GitHub
+2. Use your actual GitHub username
+3. Make sure the repository name matches
+
+### If you already added the wrong remote:
+```bash
+# Remove the incorrect remote
+git remote remove origin
+
+# Add the correct remote with your actual username
+git remote add origin https://github.com/YOUR_ACTUAL_USERNAME/smartbooks.git
 ```
 
 ## Repository Settings
