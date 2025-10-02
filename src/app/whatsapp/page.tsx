@@ -31,9 +31,18 @@ import type { Customer } from '../../lib/supabase/types';
 interface WhatsAppCustomer {
   id: string;
   name: string;
-  phone: string;
-  outstanding_purchase_amount: number;
-  bank_balance: number;
+  phone_no: string;
+  invoice_id: string;
+  invoice_num: string;
+  grn_no: string;
+  grn_date: string;
+  location: string;
+  month_year: string;
+  balance_pays: number;
+  paid_amount: number;
+  adjusted_amount: number;
+  tds: number;
+  branding_adjustment: number;
 }
 
 const WhatsAppPage: React.FC = () => {
@@ -69,7 +78,7 @@ const WhatsAppPage: React.FC = () => {
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       const allCustomerIds = customers
-        .filter(customer => customer.phone) // Only select customers with phone numbers
+        .filter(customer => customer.phone_no) // Only select customers with phone numbers
         .map(customer => customer.id);
       setSelectedCustomers(new Set(allCustomerIds));
     } else {
@@ -90,7 +99,7 @@ const WhatsAppPage: React.FC = () => {
     }
 
     // Check if all selected customers have phone numbers
-    const customersWithoutPhone = selectedCustomerData.filter(customer => !customer.phone);
+    const customersWithoutPhone = selectedCustomerData.filter(customer => !customer.phone_no);
     if (customersWithoutPhone.length > 0) {
       const customerNames = customersWithoutPhone.map(c => c.name).join(', ');
       alert(`The following customers don't have phone numbers: ${customerNames}`);
@@ -100,7 +109,7 @@ const WhatsAppPage: React.FC = () => {
     // Group customers by phone number to handle duplicates
     const customersByPhone = new Map<string, WhatsAppCustomer[]>();
     selectedCustomerData.forEach(customer => {
-      const cleanPhone = customer.phone.replace(/[\s\-\(\)\+]/g, '');
+      const cleanPhone = customer.phone_no.replace(/[\s\-\(\)\+]/g, '');
       if (!customersByPhone.has(cleanPhone)) {
         customersByPhone.set(cleanPhone, []);
       }
@@ -108,7 +117,7 @@ const WhatsAppPage: React.FC = () => {
     });
 
     const totalOutstanding = selectedCustomerData.reduce((sum, customer) => 
-      sum + customer.outstanding_purchase_amount, 0
+      sum + customer.balance_pays, 0
     );
 
     const uniquePhoneNumbers = customersByPhone.size;
@@ -172,7 +181,7 @@ const WhatsAppPage: React.FC = () => {
 
     const firstCustomer = customersGroup[0];
     
-    if (!firstCustomer.phone) {
+    if (!firstCustomer.phone_no) {
       console.error('No phone number for customer group');
       return;
     }
@@ -180,13 +189,28 @@ const WhatsAppPage: React.FC = () => {
     let combinedMessage = '';
 
     if (customersGroup.length === 1) {
-      // Single customer - use regular message
+      // Single customer - use detailed message
       const customer = customersGroup[0];
       combinedMessage = `Dear ${customer.name},
 
 Hope you are doing well! 
 
-This is a friendly reminder that you have an outstanding amount of ₹${customer.outstanding_purchase_amount.toLocaleString('en-IN')} with us.
+This is a friendly reminder regarding your invoice payment:
+
+📋 *Invoice Details:*
+• Invoice ID: ${customer.invoice_id}
+• Invoice Number: ${customer.invoice_num}
+• GRN Number: ${customer.grn_no}
+${customer.grn_date ? `• GRN Date: ${new Date(customer.grn_date).toLocaleDateString('en-IN')}` : ''}
+${customer.location ? `• Location: ${customer.location}` : ''}
+${customer.month_year ? `• Period: ${customer.month_year}` : ''}
+
+💰 *Payment Summary:*
+• Total Adjusted Amount: ₹${customer.adjusted_amount.toLocaleString('en-IN')}
+• Amount Paid: ₹${customer.paid_amount.toLocaleString('en-IN')}
+• TDS Deducted: ₹${customer.tds.toLocaleString('en-IN')}
+• Branding Adjustment: ₹${customer.branding_adjustment.toLocaleString('en-IN')}
+• *Outstanding Balance: ₹${customer.balance_pays.toLocaleString('en-IN')}*
 
 We would appreciate if you could make the payment at your earliest convenience.
 
@@ -195,25 +219,38 @@ Thank you for your business!
 Best regards,
 SmartBooks Team`;
     } else {
-      // Multiple customers with same phone - combine messages
-      const totalOutstanding = customersGroup.reduce((sum, customer) => sum + customer.outstanding_purchase_amount, 0);
-      const customerNames = customersGroup.map(c => c.name).join(', ');
+      // Multiple customers with same phone - combine messages with detailed info
+      const totalOutstanding = customersGroup.reduce((sum, customer) => sum + customer.balance_pays, 0);
+      const totalAdjusted = customersGroup.reduce((sum, customer) => sum + customer.adjusted_amount, 0);
+      const totalPaid = customersGroup.reduce((sum, customer) => sum + customer.paid_amount, 0);
+      const totalTds = customersGroup.reduce((sum, customer) => sum + customer.tds, 0);
       
       combinedMessage = `Dear Customer,
 
 Hope you are doing well! 
 
-This is a friendly reminder regarding outstanding amounts for the following accounts:
+This is a friendly reminder regarding outstanding amounts for multiple invoices:
 
+📋 *Invoice Details:*
 `;
 
       // Add each customer's details
       customersGroup.forEach((customer, index) => {
-        combinedMessage += `${index + 1}. ${customer.name}: ₹${customer.outstanding_purchase_amount.toLocaleString('en-IN')}\n`;
+        combinedMessage += `
+${index + 1}. *${customer.name}*
+   • Invoice: ${customer.invoice_id} (${customer.invoice_num})
+   • GRN: ${customer.grn_no}
+   ${customer.location ? `• Location: ${customer.location}` : ''}
+   • Outstanding: ₹${customer.balance_pays.toLocaleString('en-IN')}
+`;
       });
 
       combinedMessage += `
-Total Outstanding Amount: ₹${totalOutstanding.toLocaleString('en-IN')}
+💰 *Combined Payment Summary:*
+• Total Adjusted Amount: ₹${totalAdjusted.toLocaleString('en-IN')}
+• Total Amount Paid: ₹${totalPaid.toLocaleString('en-IN')}
+• Total TDS Deducted: ₹${totalTds.toLocaleString('en-IN')}
+• *Total Outstanding Balance: ₹${totalOutstanding.toLocaleString('en-IN')}*
 
 We would appreciate if you could make the payment at your earliest convenience.
 
@@ -224,7 +261,7 @@ SmartBooks Team`;
     }
 
     // Clean and format the phone number
-    let cleanPhone = firstCustomer.phone.replace(/[\s\-\(\)\+]/g, '');
+    let cleanPhone = firstCustomer.phone_no.replace(/[\s\-\(\)\+]/g, '');
     
     // Handle different phone number formats
     if (cleanPhone.startsWith('0')) {
@@ -237,7 +274,7 @@ SmartBooks Team`;
     
     // Validate phone number length
     if (cleanPhone.length < 10 || cleanPhone.length > 15) {
-      console.error(`Invalid phone number for customer group: ${firstCustomer.phone}`);
+      console.error(`Invalid phone number for customer group: ${firstCustomer.phone_no}`);
       return;
     }
     
@@ -253,17 +290,32 @@ SmartBooks Team`;
 
   // Handle WhatsApp message action (with optional confirmation for single messages)
   const handleSendMessage = (customer: WhatsAppCustomer, skipConfirmation = false) => {
-    if (!customer.phone) {
+    if (!customer.phone_no) {
       alert('This customer does not have a phone number');
       return;
     }
     
-    // Create the prebuilt message with professional template
+    // Create the prebuilt message with professional template including invoice details
     const message = `Dear ${customer.name},
 
 Hope you are doing well! 
 
-This is a friendly reminder that you have an outstanding amount of ₹${customer.outstanding_purchase_amount.toLocaleString('en-IN')} with us.
+This is a friendly reminder regarding your invoice payment:
+
+📋 *Invoice Details:*
+• Invoice ID: ${customer.invoice_id}
+• Invoice Number: ${customer.invoice_num}
+• GRN Number: ${customer.grn_no}
+${customer.grn_date ? `• GRN Date: ${new Date(customer.grn_date).toLocaleDateString('en-IN')}` : ''}
+${customer.location ? `• Location: ${customer.location}` : ''}
+${customer.month_year ? `• Period: ${customer.month_year}` : ''}
+
+💰 *Payment Summary:*
+• Total Adjusted Amount: ₹${customer.adjusted_amount.toLocaleString('en-IN')}
+• Amount Paid: ₹${customer.paid_amount.toLocaleString('en-IN')}
+• TDS Deducted: ₹${customer.tds.toLocaleString('en-IN')}
+• Branding Adjustment: ₹${customer.branding_adjustment.toLocaleString('en-IN')}
+• *Outstanding Balance: ₹${customer.balance_pays.toLocaleString('en-IN')}*
 
 We would appreciate if you could make the payment at your earliest convenience.
 
@@ -275,14 +327,14 @@ SmartBooks Team`;
     // Show confirmation dialog only for single messages (not bulk)
     if (!skipConfirmation) {
       const confirmed = confirm(
-        `Send WhatsApp message to ${customer.name} (${customer.phone})?\n\nMessage preview:\n"${message}"`
+        `Send WhatsApp message to ${customer.name} (${customer.phone_no})?\n\nMessage preview:\n"${message}"`
       );
       
       if (!confirmed) return;
     }
     
     // Clean and format the phone number
-    let cleanPhone = customer.phone.replace(/[\s\-\(\)\+]/g, '');
+    let cleanPhone = customer.phone_no.replace(/[\s\-\(\)\+]/g, '');
     
     // Handle different phone number formats
     if (cleanPhone.startsWith('0')) {
@@ -298,7 +350,7 @@ SmartBooks Team`;
     
     // Validate phone number length
     if (cleanPhone.length < 10 || cleanPhone.length > 15) {
-      console.error(`Invalid phone number for ${customer.name}: ${customer.phone}`);
+      console.error(`Invalid phone number for ${customer.name}: ${customer.phone_no}`);
       return;
     }
     
@@ -333,7 +385,7 @@ SmartBooks Team`;
               type="checkbox"
               checked={selectedCustomers.has(row.original.id)}
               onChange={(e) => handleSelectCustomer(row.original.id, e.target.checked)}
-              disabled={!row.original.phone}
+              disabled={!row.original.phone_no}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
             />
           </div>
@@ -347,7 +399,7 @@ SmartBooks Team`;
           </div>
         ),
       }),
-      columnHelper.accessor('phone', {
+      columnHelper.accessor('phone_no', {
         header: 'Phone Number',
         cell: (info) => (
           <div className="flex items-center text-gray-600">
@@ -356,8 +408,16 @@ SmartBooks Team`;
           </div>
         ),
       }),
-      columnHelper.accessor('bank_balance', {
-        header: 'Bank Balance',
+      columnHelper.accessor('invoice_id', {
+        header: 'Invoice ID',
+        cell: (info) => (
+          <div className="text-gray-600 font-mono text-sm">
+            {info.getValue() || '-'}
+          </div>
+        ),
+      }),
+      columnHelper.accessor('paid_amount', {
+        header: 'Paid Amount',
         cell: (info) => (
           <div className="flex items-center text-green-600 font-medium">
             <CurrencyRupeeIcon className="h-4 w-4 mr-1" />
@@ -365,8 +425,8 @@ SmartBooks Team`;
           </div>
         ),
       }),
-      columnHelper.accessor('outstanding_purchase_amount', {
-        header: 'Outstanding Amount',
+      columnHelper.accessor('balance_pays', {
+        header: 'Balance Amount',
         cell: (info) => (
           <div className="flex items-center text-red-600 font-medium">
             <CurrencyRupeeIcon className="h-4 w-4 mr-1" />
@@ -384,7 +444,7 @@ SmartBooks Team`;
               size="sm"
               onClick={() => handleSendMessage(info.row.original)}
               icon={<ChatBubbleLeftRightIcon className="h-4 w-4" />}
-              disabled={!info.row.original.phone}
+              disabled={!info.row.original.phone_no}
             >
               Send Message
             </Button>
@@ -412,9 +472,18 @@ SmartBooks Team`;
         .map(customer => ({
           id: customer.id,
           name: customer.name,
-          phone: customer.phone || '',
-          outstanding_purchase_amount: customer.outstanding_purchase_amount || 0,
-          bank_balance: customer.bank_balance || 0,
+          phone_no: customer.phone_no || '',
+          invoice_id: customer.invoice_id || '',
+          invoice_num: customer.invoice_num || '',
+          grn_no: customer.grn_no || '',
+          grn_date: customer.grn_date || '',
+          location: customer.location || '',
+          month_year: customer.month_year || '',
+          balance_pays: customer.balance_pays || 0,
+          paid_amount: customer.paid_amount || 0,
+          adjusted_amount: customer.adjusted_amount || 0,
+          tds: customer.tds || 0,
+          branding_adjustment: customer.branding_adjustment || 0,
         }));
       
       setCustomers(whatsappCustomers);
@@ -433,7 +502,7 @@ SmartBooks Team`;
   // Filter customers based on outstanding amount filter
   const filteredCustomers = useMemo(() => {
     if (showOnlyOutstanding) {
-      return customers.filter(customer => customer.outstanding_purchase_amount > 0);
+      return customers.filter(customer => customer.balance_pays > 0);
     }
     return customers;
   }, [customers, showOnlyOutstanding]);
@@ -462,9 +531,9 @@ SmartBooks Team`;
   });
 
   // Calculate totals based on filtered data
-  const totalOutstanding = filteredCustomers.reduce((sum, customer) => sum + customer.outstanding_purchase_amount, 0);
-  const customersWithPhone = filteredCustomers.filter(customer => customer.phone).length;
-  const customersWithOutstanding = filteredCustomers.filter(customer => customer.outstanding_purchase_amount > 0).length;
+  const totalOutstanding = filteredCustomers.reduce((sum, customer) => sum + customer.balance_pays, 0);
+  const customersWithPhone = filteredCustomers.filter(customer => customer.phone_no).length;
+  const customersWithOutstanding = filteredCustomers.filter(customer => customer.balance_pays > 0).length;
 
   if (loading) {
     return (
@@ -590,7 +659,7 @@ SmartBooks Team`;
                   size="sm"
                   onClick={() => {
                     const outstandingCustomers = filteredCustomers
-                      .filter(customer => customer.outstanding_purchase_amount > 0 && customer.phone)
+                      .filter(customer => customer.balance_pays > 0 && customer.phone_no)
                       .map(customer => customer.id);
                     setSelectedCustomers(new Set(outstandingCustomers));
                   }}

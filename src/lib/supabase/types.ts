@@ -72,42 +72,63 @@ export interface InvoiceItem {
   line_total: number;
 }
 
-// Customer Types
+// Customer Types - Updated Schema
 export interface Customer {
   id: string;
+  location: string | null;
+  grn_no: string | null;
+  grn_date: string | null;
+  month_year: string | null;
+  phone_no: string | null;
+  invoice_id: string | null;
+  invoice_num: string | null;
   name: string;
-  phone: string | null;
-  gst_id: string | null;
-  address: string | null;
-  discount_rules: DiscountRules;
-  bank_balance: number | null;
-  outstanding_purchase_amount: number | null;
+  adjusted_amount: number;
+  tds: number;
+  paid_amount: number;
+  branding_adjustment: number;
+  balance_pays: number;
+  payment_date: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface CustomerInsert {
   id?: string;
+  location?: string | null;
+  grn_no?: string | null;
+  grn_date?: string | null;
+  month_year?: string | null;
+  phone_no?: string | null;
+  invoice_id?: string | null;
+  invoice_num?: string | null;
   name: string;
-  phone?: string | null;
-  gst_id?: string | null;
-  address?: string | null;
-  discount_rules?: DiscountRules;
-  bank_balance?: number | null;
-  outstanding_purchase_amount?: number | null;
+  adjusted_amount?: number;
+  tds?: number;
+  paid_amount?: number;
+  branding_adjustment?: number;
+  balance_pays?: number;
+  payment_date?: string | null;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface CustomerUpdate {
   id?: string;
+  location?: string | null;
+  grn_no?: string | null;
+  grn_date?: string | null;
+  month_year?: string | null;
+  phone_no?: string | null;
+  invoice_id?: string | null;
+  invoice_num?: string | null;
   name?: string;
-  phone?: string | null;
-  gst_id?: string | null;
-  address?: string | null;
-  discount_rules?: DiscountRules;
-  bank_balance?: number | null;
-  outstanding_purchase_amount?: number | null;
+  adjusted_amount?: number;
+  tds?: number;
+  paid_amount?: number;
+  branding_adjustment?: number;
+  balance_pays?: number;
+  payment_date?: string | null;
   updated_at?: string;
 }
 

@@ -19,7 +19,7 @@ export class CustomerService {
 
       // Apply search filter
       if (options?.search) {
-        query = query.or(`name.ilike.%${options.search}%,phone.ilike.%${options.search}%,gst_id.ilike.%${options.search}%`);
+        query = query.or(`name.ilike.%${options.search}%,phone_no.ilike.%${options.search}%,invoice_id.ilike.%${options.search}%,invoice_num.ilike.%${options.search}%`);
       }
 
       // Apply ordering
@@ -78,37 +78,10 @@ export class CustomerService {
   }
 
   /**
-   * Create a new customer with default bank balance and outstanding amount
+   * Create a new customer - DISABLED as per requirements
    */
   static async create(customer: CustomerInsert) {
-    try {
-      // Set default financial values for new customers
-      const bankBalance = 0; // Can be updated later based on business requirements
-      const outstandingAmount = 0; // Can be updated later based on business requirements
-      
-      const customerData = {
-        ...customer,
-        bank_balance: bankBalance,
-        outstanding_purchase_amount: outstandingAmount
-      };
-
-      const { data, error } = await supabase
-        .from('customers')
-        .insert(customerData)
-        .select()
-        .single();
-
-      if (error) {
-        throw new Error(handleSupabaseError(error));
-      }
-
-      // Note: Customer ledger entries can be created later when needed for transaction tracking
-
-      return data;
-    } catch (error) {
-      console.error('Error creating customer:', error);
-      throw error;
-    }
+    throw new Error('Creating new customers is not allowed in this system');
   }
 
   /**
@@ -154,7 +127,7 @@ export class CustomerService {
   }
 
   /**
-   * Get customer with their current balance (already stored in customers table)
+   * Get customer with their current balance (using new schema)
    */
   static async getWithBalance(id: string) {
     try {
@@ -163,8 +136,8 @@ export class CustomerService {
 
       return {
         ...customer,
-        current_balance: customer.bank_balance || 0,
-        outstanding_amount: customer.outstanding_purchase_amount || 0
+        current_balance: customer.balance_pays || 0,
+        outstanding_amount: customer.balance_pays || 0
       };
     } catch (error) {
       console.error('Error fetching customer with balance:', error);
@@ -173,14 +146,14 @@ export class CustomerService {
   }
 
   /**
-   * Search customers by name, phone, or GST ID
+   * Search customers by name, phone, or invoice details
    */
   static async search(query: string, limit = 10) {
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, phone, gst_id')
-        .or(`name.ilike.%${query}%,phone.ilike.%${query}%,gst_id.ilike.%${query}%`)
+        .select('id, name, phone_no, invoice_id, invoice_num')
+        .or(`name.ilike.%${query}%,phone_no.ilike.%${query}%,invoice_id.ilike.%${query}%,invoice_num.ilike.%${query}%`)
         .limit(limit);
 
       if (error) {
@@ -202,7 +175,7 @@ export class CustomerService {
       const { data: customers, error } = await supabase
         .from('customers')
         .select('*')
-        .gt('outstanding_purchase_amount', 0);
+        .gt('balance_pays', 0);
 
       if (error) {
         throw new Error(handleSupabaseError(error));
@@ -217,47 +190,85 @@ export class CustomerService {
 }
 
 /**
- * Calculate total bank balance and outstanding amount using database aggregation
+ * Calculate total financial amounts using new schema
  */
 export async function calculateCustomerFinancials(customers?: any[]) {
   try {
     // If customers array is provided, calculate from it
     if (customers && customers.length > 0) {
-      let totalBankBalance = 0;
-      let totalOutstanding = 0;
+      let totalPaidAmount = 0;
+      let totalBalancePays = 0;
+      let totalAdjustedAmount = 0;
+      let totalTds = 0;
 
       for (const customer of customers) {
-        totalBankBalance += customer.bank_balance || 0;
-        totalOutstanding += customer.outstanding_purchase_amount || 0;
+        totalPaidAmount += customer.paid_amount || 0;
+        totalBalancePays += customer.balance_pays || 0;
+        totalAdjustedAmount += customer.adjusted_amount || 0;
+        totalTds += customer.tds || 0;
       }
 
-      return { totalBankBalance, totalOutstanding };
+      return { 
+        totalPaidAmount, 
+        totalBalancePays, 
+        totalAdjustedAmount, 
+        totalTds,
+        // For backward compatibility
+        totalBankBalance: totalPaidAmount,
+        totalOutstanding: totalBalancePays
+      };
     }
 
     // Otherwise, use database aggregation for better performance
     const { data, error } = await supabase
       .from('customers')
-      .select('bank_balance, outstanding_purchase_amount');
+      .select('paid_amount, balance_pays, adjusted_amount, tds');
 
     if (error) {
       console.error('Error fetching customer financial data:', error);
-      return { totalBankBalance: 0, totalOutstanding: 0 };
+      return { 
+        totalPaidAmount: 0, 
+        totalBalancePays: 0, 
+        totalAdjustedAmount: 0, 
+        totalTds: 0,
+        totalBankBalance: 0,
+        totalOutstanding: 0
+      };
     }
 
-    let totalBankBalance = 0;
-    let totalOutstanding = 0;
+    let totalPaidAmount = 0;
+    let totalBalancePays = 0;
+    let totalAdjustedAmount = 0;
+    let totalTds = 0;
 
     if (data && data.length > 0) {
       for (const customer of data) {
-        totalBankBalance += customer.bank_balance || 0;
-        totalOutstanding += customer.outstanding_purchase_amount || 0;
+        totalPaidAmount += customer.paid_amount || 0;
+        totalBalancePays += customer.balance_pays || 0;
+        totalAdjustedAmount += customer.adjusted_amount || 0;
+        totalTds += customer.tds || 0;
       }
     }
 
-    return { totalBankBalance, totalOutstanding };
+    return { 
+      totalPaidAmount, 
+      totalBalancePays, 
+      totalAdjustedAmount, 
+      totalTds,
+      // For backward compatibility
+      totalBankBalance: totalPaidAmount,
+      totalOutstanding: totalBalancePays
+    };
   } catch (error) {
     console.error('Error calculating customer financials:', error);
-    return { totalBankBalance: 0, totalOutstanding: 0 };
+    return { 
+      totalPaidAmount: 0, 
+      totalBalancePays: 0, 
+      totalAdjustedAmount: 0, 
+      totalTds: 0,
+      totalBankBalance: 0,
+      totalOutstanding: 0
+    };
   }
 }
 
@@ -273,20 +284,40 @@ export async function getDashboardStats() {
 
     if (countError) {
       console.error('Error getting customer count:', countError);
-      return { totalCustomers: 0, totalBankBalance: 0, totalOutstanding: 0 };
+      return { 
+        totalCustomers: 0, 
+        totalBankBalance: 0, 
+        totalOutstanding: 0,
+        totalPaidAmount: 0,
+        totalBalancePays: 0,
+        totalAdjustedAmount: 0,
+        totalTds: 0
+      };
     }
 
     // Get financial totals
-    const { totalBankBalance, totalOutstanding } = await calculateCustomerFinancials();
+    const financials = await calculateCustomerFinancials();
 
     return {
       totalCustomers: count || 0,
-      totalBankBalance,
-      totalOutstanding
+      totalBankBalance: financials.totalBankBalance,
+      totalOutstanding: financials.totalOutstanding,
+      totalPaidAmount: financials.totalPaidAmount,
+      totalBalancePays: financials.totalBalancePays,
+      totalAdjustedAmount: financials.totalAdjustedAmount,
+      totalTds: financials.totalTds
     };
   } catch (error) {
     console.error('Error getting dashboard stats:', error);
-    return { totalCustomers: 0, totalBankBalance: 0, totalOutstanding: 0 };
+    return { 
+      totalCustomers: 0, 
+      totalBankBalance: 0, 
+      totalOutstanding: 0,
+      totalPaidAmount: 0,
+      totalBalancePays: 0,
+      totalAdjustedAmount: 0,
+      totalTds: 0
+    };
   }
 }
 

@@ -13,7 +13,9 @@ import {
   SortingState,
   ColumnFiltersState,
 } from '@tanstack/react-table';
-import { MagnifyingGlassIcon, PlusIcon, PencilIcon, TrashIcon, EyeIcon, HomeIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, EyeIcon, HomeIcon } from '@heroicons/react/24/outline';
+import { ProtectedRoute } from '../auth/ProtectedRoute';
+import { DashboardLayout } from '../layout';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Card from '../ui/Card';
@@ -22,12 +24,10 @@ import { CustomerService } from '../../lib/services/customers';
 import type { Customer } from '../../lib/supabase/types';
 
 interface CustomerListProps {
-  onEdit?: (customer: Customer) => void;
-  onDelete?: (customer: Customer) => void;
   onView?: (customer: Customer) => void;
 }
 
-export function CustomerList({ onEdit, onDelete, onView }: CustomerListProps) {
+export function CustomerList({ onView }: CustomerListProps) {
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,28 +48,7 @@ export function CustomerList({ onEdit, onDelete, onView }: CustomerListProps) {
     }
   };
 
-  const handleEdit = (customer: Customer) => {
-    if (onEdit) {
-      onEdit(customer);
-    } else {
-      router.push(`/customers/${customer.id}/edit`);
-    }
-  };
 
-  const handleDelete = async (customer: Customer) => {
-    if (onDelete) {
-      onDelete(customer);
-    } else {
-      if (confirm(`Are you sure you want to delete customer "${customer.name}"?`)) {
-        try {
-          await CustomerService.delete(customer.id);
-          await loadCustomers(); // Reload the list
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to delete customer');
-        }
-      }
-    }
-  };
 
   // Define table columns
   const columns = useMemo(
@@ -82,7 +61,7 @@ export function CustomerList({ onEdit, onDelete, onView }: CustomerListProps) {
           </div>
         ),
       }),
-      columnHelper.accessor('phone', {
+      columnHelper.accessor('phone_no', {
         header: 'Phone',
         cell: (info) => (
           <div className="text-gray-600">
@@ -90,19 +69,51 @@ export function CustomerList({ onEdit, onDelete, onView }: CustomerListProps) {
           </div>
         ),
       }),
-      columnHelper.accessor('gst_id', {
-        header: 'GST ID',
+      columnHelper.accessor('location', {
+        header: 'Location',
+        cell: (info) => (
+          <div className="text-gray-600 max-w-xs truncate">
+            {info.getValue() || '-'}
+          </div>
+        ),
+      }),
+      columnHelper.accessor('invoice_id', {
+        header: 'Invoice ID',
         cell: (info) => (
           <div className="text-gray-600 font-mono text-sm">
             {info.getValue() || '-'}
           </div>
         ),
       }),
-      columnHelper.accessor('address', {
-        header: 'Address',
+      columnHelper.accessor('grn_no', {
+        header: 'GRN No',
         cell: (info) => (
-          <div className="text-gray-600 max-w-xs truncate">
+          <div className="text-gray-600 font-mono text-sm">
             {info.getValue() || '-'}
+          </div>
+        ),
+      }),
+      columnHelper.accessor('month_year', {
+        header: 'Month-Year',
+        cell: (info) => (
+          <div className="text-gray-600 text-sm">
+            {info.getValue() || '-'}
+          </div>
+        ),
+      }),
+      columnHelper.accessor('paid_amount', {
+        header: 'Paid Amount',
+        cell: (info) => (
+          <div className="text-green-600 font-medium">
+            ₹{info.getValue()?.toLocaleString('en-IN') || '0'}
+          </div>
+        ),
+      }),
+      columnHelper.accessor('balance_pays', {
+        header: 'Balance',
+        cell: (info) => (
+          <div className="text-red-600 font-medium">
+            ₹{info.getValue()?.toLocaleString('en-IN') || '0'}
           </div>
         ),
       }),
@@ -127,27 +138,11 @@ export function CustomerList({ onEdit, onDelete, onView }: CustomerListProps) {
             >
               View
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEdit(info.row.original)}
-              icon={<PencilIcon className="h-4 w-4" />}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDelete(info.row.original)}
-              icon={<TrashIcon className="h-4 w-4" />}
-            >
-              Delete
-            </Button>
           </div>
         ),
       }),
     ],
-    [handleView, handleEdit, handleDelete, columnHelper]
+    [handleView, columnHelper]
   );
 
   // Load customers
@@ -201,49 +196,58 @@ export function CustomerList({ onEdit, onDelete, onView }: CustomerListProps) {
 
   if (loading) {
     return (
-      <Card>
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-        </div>
-      </Card>
+      <ProtectedRoute>
+        <DashboardLayout>
+          <div className="p-6">
+            <Card>
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+              </div>
+            </Card>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <div className="text-center py-12">
-          <div className="text-red-600 mb-4">{error}</div>
-          <Button onClick={loadCustomers}>Try Again</Button>
-        </div>
-      </Card>
+      <ProtectedRoute>
+        <DashboardLayout>
+          <div className="p-6">
+            <Card>
+              <div className="text-center py-12">
+                <div className="text-red-600 mb-4">{error}</div>
+                <Button onClick={loadCustomers}>Try Again</Button>
+              </div>
+            </Card>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-          <p className="text-gray-600">Manage your customer database</p>
-        </div>
-        <div className="flex space-x-3">
-          <Button
-            variant="outline"
-            onClick={() => router.push('/dashboard')}
-            icon={<HomeIcon className="h-5 w-5" />}
-          >
-            Dashboard
-          </Button>
-          <Button
-            onClick={handleCreateNew}
-            icon={<PlusIcon className="h-5 w-5" />}
-          >
-            Add Customer
-          </Button>
-        </div>
-      </div>
+    <ProtectedRoute>
+      <DashboardLayout>
+        <div className="p-6 space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+              <p className="text-gray-600">Manage your customer database</p>
+            </div>
+            <div className="flex space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/dashboard')}
+                icon={<HomeIcon className="h-5 w-5" />}
+              >
+                Dashboard
+              </Button>
+              {/* Create customer option removed as per requirements */}
+            </div>
+          </div>
 
       {/* Search and Filters */}
       <Card>
@@ -251,7 +255,7 @@ export function CustomerList({ onEdit, onDelete, onView }: CustomerListProps) {
           <div className="flex-1">
             <Input
               label=""
-              placeholder="Search customers by name, phone, or GST ID..."
+              placeholder="Search customers by name, phone, or invoice details..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               icon={<MagnifyingGlassIcon className="h-5 w-5" />}
@@ -302,6 +306,8 @@ export function CustomerList({ onEdit, onDelete, onView }: CustomerListProps) {
           </div>
         </div>
       </Card>
-    </div>
+        </div>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }

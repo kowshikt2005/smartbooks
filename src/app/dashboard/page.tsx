@@ -17,6 +17,10 @@ interface DashboardStats {
   totalCustomers: number;
   totalBankBalance: number;
   totalOutstanding: number;
+  totalPaidAmount: number;
+  totalBalancePays: number;
+  totalAdjustedAmount: number;
+  totalTds: number;
 }
 
 const DashboardPage: React.FC = () => {
@@ -67,13 +71,6 @@ const DashboardPage: React.FC = () => {
   }, []);
 
   const quickActions = [
-    {
-      name: 'New Customer',
-      href: '/customers/new',
-      icon: UsersIcon,
-      color: 'bg-blue-500 hover:bg-blue-600',
-      description: 'Add a new customer'
-    },
     {
       name: 'WhatsApp Message',
       href: '/whatsapp',
@@ -129,8 +126,8 @@ const DashboardPage: React.FC = () => {
                       <CurrencyRupeeIcon className="h-6 w-6 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Total Bank Balance</p>
-                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats?.totalBankBalance || 0)}</p>
+                      <p className="text-sm font-medium text-gray-600">Total Paid Amount</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats?.totalPaidAmount || 0)}</p>
                     </div>
                   </div>
                 </Card>
@@ -141,8 +138,35 @@ const DashboardPage: React.FC = () => {
                       <CurrencyRupeeIcon className="h-6 w-6 text-red-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Outstanding Purchases</p>
-                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats?.totalOutstanding || 0)}</p>
+                      <p className="text-sm font-medium text-gray-600">Total Balance Pays</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats?.totalBalancePays || 0)}</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Additional Stats Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+                <Card className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-blue-100 mr-4">
+                      <CurrencyRupeeIcon className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Adjusted Amount</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats?.totalAdjustedAmount || 0)}</p>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-orange-100 mr-4">
+                      <CurrencyRupeeIcon className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total TDS</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats?.totalTds || 0)}</p>
                     </div>
                   </div>
                 </Card>
