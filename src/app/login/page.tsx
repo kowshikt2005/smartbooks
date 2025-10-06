@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { LoginForm } from '../../components/auth/LoginForm';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 
-const LoginPage: React.FC = () => {
+// Separate component for search params to wrap in Suspense
+const LoginContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -21,50 +22,63 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <ProtectedRoute requireAuth={false}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          {/* Logo/Brand Section */}
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-              <svg
-                className="h-8 w-8 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900">SmartBooks</h2>
-            <p className="mt-2 text-gray-600">Accounting & Inventory Management</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        {/* Logo/Brand Section */}
+        <div className="text-center">
+          <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
+            <svg
+              className="h-8 w-8 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
           </div>
+          <h2 className="text-3xl font-bold text-gray-900">SmartBooks</h2>
+          <p className="mt-2 text-gray-600">Accounting & Inventory Management</p>
+        </div>
 
-          {/* Login Form */}
-          {!showForgotPassword ? (
-            <LoginForm
-              onSuccess={handleLoginSuccess}
-              onForgotPassword={handleForgotPassword}
-            />
-          ) : (
-            <ForgotPasswordForm
-              onBack={() => setShowForgotPassword(false)}
-            />
-          )}
+        {/* Login Form */}
+        {!showForgotPassword ? (
+          <LoginForm
+            onSuccess={handleLoginSuccess}
+            onForgotPassword={handleForgotPassword}
+          />
+        ) : (
+          <ForgotPasswordForm
+            onBack={() => setShowForgotPassword(false)}
+          />
+        )}
 
-          {/* Footer */}
-          <div className="text-center">
-            <p className="text-sm text-gray-500">
-              © 2024 SmartBooks. All rights reserved.
-            </p>
-          </div>
+        {/* Footer */}
+        <div className="text-center">
+          <p className="text-sm text-gray-500">
+            © 2024 SmartBooks. All rights reserved.
+          </p>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Main component with Suspense wrapper
+const LoginPage: React.FC = () => {
+  return (
+    <ProtectedRoute requireAuth={false}>
+      <Suspense fallback={
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      }>
+        <LoginContent />
+      </Suspense>
     </ProtectedRoute>
   );
 };

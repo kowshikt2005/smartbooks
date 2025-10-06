@@ -14,3 +14,4 @@ export const metadata = {
   title: 'Customer Details - SmartBooks',
   description: 'View customer information and account details',
 };
+

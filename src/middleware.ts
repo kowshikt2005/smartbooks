@@ -16,7 +16,6 @@ const protectedRoutes = [
   '/api/invoices',
   '/api/inventory',
   '/api/reports',
-  '/api/whatsapp',
 ];
 
 // Define public routes that don't require authentication
@@ -26,6 +25,9 @@ const publicRoutes = [
   '/auth',
   '/api/auth',
   '/api/health',
+  '/api/whatsapp',
+  '/api/whatsapp/import',
+  '/api/whatsapp/template',
 ];
 
 // Define admin-only routes (for future use)
@@ -118,7 +120,15 @@ export async function middleware(request: NextRequest) {
   // Handle authentication for protected routes
   if (isProtectedRoute) {
     if (!session) {
-      // Redirect to login if not authenticated
+      // For API routes, return JSON error instead of redirect
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      
+      // Redirect to login if not authenticated (for pages)
       const redirectUrl = new URL('/login', request.url);
       redirectUrl.searchParams.set('redirectTo', pathname);
       return NextResponse.redirect(redirectUrl);

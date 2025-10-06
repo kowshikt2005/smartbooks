@@ -17,7 +17,8 @@ import {
   ChatBubbleLeftRightIcon, 
   PhoneIcon,
   CurrencyRupeeIcon,
-  HomeIcon
+  HomeIcon,
+  DocumentArrowUpIcon
 } from '@heroicons/react/24/outline';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 import { DashboardLayout } from '../../components/layout';
@@ -25,6 +26,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Card from '../../components/ui/Card';
 import DataTable from '../../components/ui/DataTable';
+import ExcelImport from '../../components/whatsapp/ExcelImport';
 import { CustomerService } from '../../lib/services/customers';
 import type { Customer } from '../../lib/supabase/types';
 
@@ -43,6 +45,7 @@ interface WhatsAppCustomer {
   adjusted_amount: number;
   tds: number;
   branding_adjustment: number;
+  originalData?: any; // For imported Excel data
 }
 
 const WhatsAppPage: React.FC = () => {
@@ -56,6 +59,10 @@ const WhatsAppPage: React.FC = () => {
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [showOnlyOutstanding, setShowOnlyOutstanding] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importedContacts, setImportedContacts] = useState<any[]>([]);
+  const [isShowingImportedData, setIsShowingImportedData] = useState(false);
+  const [originalCustomers, setOriginalCustomers] = useState<WhatsAppCustomer[]>([]);
 
   // Column helper for type safety
   const columnHelper = createColumnHelper<WhatsAppCustomer>();
@@ -288,6 +295,179 @@ SmartBooks Team`;
     window.open(whatsappUrl, '_blank');
   };
 
+  // Handle Excel import completion
+  const handleImportComplete = (importedData: any[]) => {
+    setImportedContacts(importedData);
+    setShowImportModal(false);
+    
+    // Store original customers if not already stored
+    if (!isShowingImportedData) {
+      setOriginalCustomers([...customers]);
+    }
+    
+    // Replace the customers data with imported data - be very flexible with field mapping
+    const transformedData = importedData.map((contact, index) => {
+      // Find name field from various possible names
+      const nameFields = Object.keys(contact).filter(key => 
+        key.toLowerCase().includes('name') || 
+        key.toLowerCase().includes('contact') || 
+        key.toLowerCase().includes('party') ||
+        key.toLowerCase().includes('customer') ||
+        key.toLowerCase().includes('client')
+      );
+      const nameValue = nameFields.length > 0 ? contact[nameFields[0]] : 'Unknown';
+
+      // Find phone field from various possible names
+      const phoneFields = Object.keys(contact).filter(key => 
+        key.toLowerCase().includes('phone') || 
+        key.toLowerCase().includes('mobile') || 
+        key.toLowerCase().includes('contact')
+      );
+      const phoneValue = phoneFields.length > 0 ? contact[phoneFields[0]] : '';
+
+      // Find amount field from various possible names
+      const amountFields = Object.keys(contact).filter(key => 
+        key.toLowerCase().includes('balance') || 
+        key.toLowerCase().includes('outstanding') || 
+        key.toLowerCase().includes('amount') ||
+        key.toLowerCase().includes('due') ||
+        key.toLowerCase().includes('total')
+      );
+      const amountValue = amountFields.length > 0 ? contact[amountFields[0]] : 0;
+
+      return {
+        id: `imported-${index}`,
+        name: nameValue || 'Unknown',
+        phone_no: phoneValue || '',
+        invoice_id: contact['Trans#'] || contact['Transaction'] || contact['Invoice ID'] || '',
+        invoice_num: contact['Invoice Number'] || contact['Invoice No'] || '',
+        grn_no: contact['GRN'] || contact['GRN No'] || '',
+        grn_date: contact['Date'] || contact['GRN Date'] || '',
+        location: contact['Location'] || contact['Branch'] || '',
+        month_year: contact['Month'] || contact['Period'] || '',
+        balance_pays: typeof amountValue === 'number' ? amountValue : 0,
+        paid_amount: contact['Paid Amount'] || contact['Paid'] || 0,
+        adjusted_amount: contact['Adjusted Amount'] || contact['Adjusted'] || 0,
+        tds: contact['TDS'] || contact['Tax'] || 0,
+        branding_adjustment: contact['Branding'] || 0,
+        // Store all original data for reference
+        originalData: contact
+      };
+    });
+    
+    setCustomers(transformedData);
+    setIsShowingImportedData(true);
+    
+    // Show success message
+    alert(`Successfully imported ${importedData.length} records from Excel file! The table now shows your imported data.`);
+  };
+
+  // Handle switching back to database data
+  const handleShowDatabaseData = () => {
+    setCustomers(originalCustomers);
+    setIsShowingImportedData(false);
+    setImportedContacts([]);
+  };
+
+  // Handle sending messages to imported contacts
+  const handleSendToImported = () => {
+    if (importedContacts.length === 0) {
+      alert('No imported contacts available');
+      return;
+    }
+
+    // Find contacts with phone numbers (check various possible phone field names)
+    const contactsWithPhone = importedContacts.filter(contact => {
+      const phoneFields = ['phone', 'Phone', 'phoneno', 'PhoneNo', 'mobile', 'Mobile', 'contact', 'Contact'];
+      return phoneFields.some(field => contact[field]);
+    });
+    
+    if (contactsWithPhone.length === 0) {
+      alert('No imported contacts have phone numbers');
+      return;
+    }
+
+    // Calculate total outstanding from various amount fields
+    const totalOutstanding = contactsWithPhone.reduce((sum, contact) => {
+      const amountFields = ['outstanding', 'Outstanding', 'balance', 'Balance', 'amount', 'Amount', 'due', 'Due'];
+      const amount = amountFields.find(field => contact[field] && typeof contact[field] === 'number');
+      return sum + (amount ? contact[amount] : 0);
+    }, 0);
+
+    const confirmed = confirm(
+      `Send WhatsApp messages to ${contactsWithPhone.length} imported contacts?\n\n` +
+      `Total outstanding amount: ₹${totalOutstanding.toLocaleString('en-IN')}\n` +
+      `This will open ${contactsWithPhone.length} WhatsApp tabs/windows.`
+    );
+
+    if (!confirmed) return;
+
+    // Send messages to imported contacts
+    contactsWithPhone.forEach((contact, index) => {
+      setTimeout(() => {
+        // Get name from various possible name fields
+        const nameFields = ['name', 'Name', 'customer name', 'Customer Name', 'client name', 'Client Name', 'party name', 'Party Name'];
+        const customerName = nameFields.find(field => contact[field]) ? contact[nameFields.find(field => contact[field])!] : 'Customer';
+
+        // Get phone from various possible phone fields
+        const phoneFields = ['phone', 'Phone', 'phoneno', 'PhoneNo', 'mobile', 'Mobile', 'contact', 'Contact'];
+        const phoneField = phoneFields.find(field => contact[field]);
+        const phoneNumber = phoneField ? contact[phoneField] : '';
+
+        // Get outstanding amount from various possible amount fields
+        const amountFields = ['outstanding', 'Outstanding', 'balance', 'Balance', 'amount', 'Amount', 'due', 'Due'];
+        const amountField = amountFields.find(field => contact[field] && typeof contact[field] === 'number');
+        const outstandingAmount = amountField ? contact[amountField] : null;
+
+        // Create dynamic message with all available data
+        let message = `Dear ${customerName},
+
+Hope you are doing well! 
+
+This is a friendly reminder regarding your account:
+
+`;
+
+        // Add all relevant data from the Excel
+        Object.keys(contact).forEach(key => {
+          if (key !== 'rowNumber' && key !== 'errors' && contact[key] !== null && contact[key] !== undefined) {
+            const value = typeof contact[key] === 'number' && key.toLowerCase().includes('amount') 
+              ? `₹${contact[key].toLocaleString('en-IN')}`
+              : contact[key];
+            message += `• ${key}: ${value}\n`;
+          }
+        });
+
+        message += `
+We would appreciate if you could make the payment at your earliest convenience.
+
+Thank you for your business!
+
+Best regards,
+SmartBooks Team`;
+        
+        // Clean phone number
+        let cleanPhone = phoneNumber.toString().replace(/[\s\-\(\)\+]/g, '');
+        
+        if (cleanPhone.startsWith('0')) {
+          cleanPhone = '91' + cleanPhone.substring(1);
+        } else if (cleanPhone.length === 10 && !cleanPhone.startsWith('91')) {
+          cleanPhone = '91' + cleanPhone;
+        }
+        
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+        
+        window.open(whatsappUrl, '_blank');
+      }, index * 800); // Stagger the opening of tabs
+    });
+
+    // Clear imported contacts after sending
+    setTimeout(() => {
+      setImportedContacts([]);
+    }, contactsWithPhone.length * 800 + 1000);
+  };
+
   // Handle WhatsApp message action (with optional confirmation for single messages)
   const handleSendMessage = (customer: WhatsAppCustomer, skipConfirmation = false) => {
     if (!customer.phone_no) {
@@ -295,8 +475,37 @@ SmartBooks Team`;
       return;
     }
     
-    // Create the prebuilt message with professional template including invoice details
-    const message = `Dear ${customer.name},
+    let message;
+    
+    if (isShowingImportedData && customer.originalData) {
+      // Create message with all imported data
+      message = `Dear ${customer.name},
+
+Hope you are doing well! 
+
+This is a friendly reminder regarding your account:
+
+`;
+      // Add all relevant data from the Excel
+      Object.keys(customer.originalData).forEach(key => {
+        if (key !== 'rowNumber' && key !== 'errors' && customer.originalData[key] !== null && customer.originalData[key] !== undefined) {
+          const value = typeof customer.originalData[key] === 'number' && key.toLowerCase().includes('amount') 
+            ? `₹${customer.originalData[key].toLocaleString('en-IN')}`
+            : customer.originalData[key];
+          message += `• ${key}: ${value}\n`;
+        }
+      });
+
+      message += `
+We would appreciate if you could make the payment at your earliest convenience.
+
+Thank you for your business!
+
+Best regards,
+SmartBooks Team`;
+    } else {
+      // Create the standard database message
+      message = `Dear ${customer.name},
 
 Hope you are doing well! 
 
@@ -323,6 +532,7 @@ Thank you for your business!
 
 Best regards,
 SmartBooks Team`;
+    }
     
     // Show confirmation dialog only for single messages (not bulk)
     if (!skipConfirmation) {
@@ -387,6 +597,7 @@ SmartBooks Team`;
               onChange={(e) => handleSelectCustomer(row.original.id, e.target.checked)}
               disabled={!row.original.phone_no}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+              title={!row.original.phone_no ? 'No phone number - WhatsApp messaging not available' : ''}
             />
           </div>
         ),
@@ -404,7 +615,9 @@ SmartBooks Team`;
         cell: (info) => (
           <div className="flex items-center text-gray-600">
             <PhoneIcon className="h-4 w-4 mr-2 text-gray-400" />
-            {info.getValue() || 'No phone number'}
+            <span className={!info.getValue() ? 'text-red-500 italic' : ''}>
+              {info.getValue() || 'No phone number'}
+            </span>
           </div>
         ),
       }),
@@ -445,8 +658,9 @@ SmartBooks Team`;
               onClick={() => handleSendMessage(info.row.original)}
               icon={<ChatBubbleLeftRightIcon className="h-4 w-4" />}
               disabled={!info.row.original.phone_no}
+              title={!info.row.original.phone_no ? 'No phone number available' : 'Send WhatsApp message'}
             >
-              Send Message
+              {info.row.original.phone_no ? 'Send Message' : 'No Phone'}
             </Button>
           </div>
         ),
@@ -487,6 +701,10 @@ SmartBooks Team`;
         }));
       
       setCustomers(whatsappCustomers);
+      // Store as original customers if not showing imported data
+      if (!isShowingImportedData) {
+        setOriginalCustomers(whatsappCustomers);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load customers');
     } finally {
@@ -576,9 +794,30 @@ SmartBooks Team`;
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">WhatsApp Messages</h1>
-              <p className="text-gray-600">Send payment reminders and messages to customers</p>
+              <p className="text-gray-600">
+                {isShowingImportedData 
+                  ? `Showing imported Excel data (${customers.length} records)`
+                  : 'Send payment reminders and messages to customers'
+                }
+              </p>
             </div>
             <div className="flex space-x-3">
+              {isShowingImportedData && (
+                <Button
+                  variant="outline"
+                  onClick={handleShowDatabaseData}
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                >
+                  Show Database Data
+                </Button>
+              )}
+              <Button
+                onClick={() => setShowImportModal(true)}
+                icon={<DocumentArrowUpIcon className="h-5 w-5" />}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Import Excel
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => router.push('/dashboard')}
@@ -589,6 +828,21 @@ SmartBooks Team`;
             </div>
           </div>
 
+          {/* Data Source Indicator */}
+          {isShowingImportedData && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <DocumentArrowUpIcon className="h-5 w-5 text-green-600" />
+                <span className="text-sm font-medium text-green-800">
+                  Currently showing imported Excel data
+                </span>
+                <span className="text-xs text-green-600">
+                  ({customers.length} records imported)
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <Card className="p-6">
@@ -597,7 +851,9 @@ SmartBooks Team`;
                   <PhoneIcon className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Customers with Phone</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    {isShowingImportedData ? 'Imported Records with Phone' : 'Customers with Phone'}
+                  </p>
                   <p className="text-2xl font-bold text-gray-900">{customersWithPhone}</p>
                 </div>
               </div>
@@ -609,7 +865,9 @@ SmartBooks Team`;
                   <CurrencyRupeeIcon className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Outstanding Customers</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    {isShowingImportedData ? 'Records with Outstanding' : 'Outstanding Customers'}
+                  </p>
                   <p className="text-2xl font-bold text-gray-900">{customersWithOutstanding}</p>
                 </div>
               </div>
@@ -666,6 +924,28 @@ SmartBooks Team`;
                 >
                   Select Outstanding
                 </Button>
+
+                {/* Imported Contacts Actions */}
+                {importedContacts.length > 0 && (
+                  <>
+                    <span className="text-sm text-blue-600 font-medium">
+                      {importedContacts.length} imported contacts
+                    </span>
+                    <Button
+                      onClick={handleSendToImported}
+                      icon={<ChatBubbleLeftRightIcon className="h-4 w-4" />}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Send to Imported ({importedContacts.length})
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setImportedContacts([])}
+                    >
+                      Clear Imported
+                    </Button>
+                  </>
+                )}
 
                 {/* Bulk Actions */}
                 {selectedCustomers.size > 0 && (
@@ -738,6 +1018,14 @@ SmartBooks Team`;
               </div>
             </div>
           </Card>
+
+          {/* Excel Import Modal */}
+          {showImportModal && (
+            <ExcelImport
+              onImportComplete={handleImportComplete}
+              onClose={() => setShowImportModal(false)}
+            />
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
