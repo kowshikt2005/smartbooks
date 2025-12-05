@@ -1,25 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { WhatsAppAnalyticsService } from '@/lib/services/whatsappAnalytics';
+import { NextResponse } from 'next/server';
+import { whatsappAnalyticsService } from '@/lib/services/whatsappAnalytics';
 
 /**
+ * Get WhatsApp Analytics
  * GET /api/whatsapp/stats
- * Get WhatsApp analytics and statistics
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Get analytics data
-    const analytics = await WhatsAppAnalyticsService.getAnalytics();
+    console.log('📊 Fetching WhatsApp analytics...');
+    
+    const analytics = await whatsappAnalyticsService.getAnalytics();
+    
+    console.log('✅ Analytics fetched successfully:', analytics);
 
     return NextResponse.json({
       success: true,
       analytics
     });
   } catch (error) {
-    console.error('Error fetching WhatsApp stats:', error);
+    console.error('❌ Error fetching WhatsApp analytics:', error);
+    
     return NextResponse.json(
-      {
+      { 
         success: false,
-        error: 'Failed to fetch WhatsApp statistics',
+        error: 'Failed to fetch analytics',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

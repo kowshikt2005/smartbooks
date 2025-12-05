@@ -91,10 +91,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       }`}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <div className="flex items-center">
-            <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center mr-3">
+            <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
               <DocumentTextIcon className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">SmartBooks</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -132,10 +131,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-sm">
           {/* Logo */}
           <div className="flex items-center h-16 px-4 border-b border-gray-200">
-            <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center mr-3">
+            <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
               <DocumentTextIcon className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">SmartBooks</span>
           </div>
           
           {/* Navigation */}
