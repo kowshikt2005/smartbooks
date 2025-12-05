@@ -5,15 +5,7 @@ export { ProtectedRoute, withAuth, useRouteAccess, UnauthorizedAccess } from './
 // Re-export auth context and hooks
 export { AuthProvider, useAuth, useAuthUser, useIsAuthenticated, useAuthLoading } from '../../contexts/AuthContext';
 
-// Re-export session hooks
-export {
-  useSession,
-  useAutoRefreshSession,
-  useSessionExpiryWarning,
-  useSessionPersistence,
-  useUserActivity,
-  useSessionTimeout,
-} from '../../hooks/useSession';
+// Session hooks removed - using AuthContext directly
 
 // Re-export auth service
 export {

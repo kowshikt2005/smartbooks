@@ -96,11 +96,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       lg: ['px-6', 'py-3', 'text-lg']
     };
 
+    // Ensure variant and size are valid
+    const safeVariant = variant && variant in variantClasses ? variant : 'primary';
+    const safeSize = size && size in sizeClasses ? size : 'md';
+
     const classes = twMerge(
       clsx([
         ...baseClasses,
-        ...variantClasses[variant],
-        ...sizeClasses[size],
+        ...variantClasses[safeVariant],
+        ...sizeClasses[safeSize],
         loading && 'cursor-wait',
         className
       ])

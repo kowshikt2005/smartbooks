@@ -20,7 +20,7 @@ interface ImportedRow {
   outstanding?: number | null;
   rowNumber: number;
   errors?: string[];
-  [key: string]: any; // Allow dynamic properties
+  [key: string]: unknown; // Allow dynamic properties
 }
 
 interface ImportResult {
@@ -199,7 +199,7 @@ const ExcelImport: React.FC<ExcelImportProps> = ({ onImportComplete, onClose }) 
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Excel File Requirements</h3>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-blue-800 mb-3">
-                    Upload any Excel file with customer data. The system will automatically detect and import all columns.
+                    Upload any Excel file with contact data. The system will automatically detect and import all columns.
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="flex items-center space-x-2">

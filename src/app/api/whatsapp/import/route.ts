@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Try to identify common columns but don't require them
-    const nameIndex = findColumnIndex(['name', 'customer name', 'client name', 'party name', 'contacts', 'contact']);
+    const nameIndex = findColumnIndex(['name', 'contact name', 'client name', 'party name', 'contacts', 'contact']);
     const phoneIndex = findColumnIndex(['phone', 'phoneno', 'phone number', 'mobile', 'contact number']);
     const outstandingIndex = findColumnIndex(['outstanding', 'outstanding amount', 'balance', 'due amount', 'amount due', 'total']);
     

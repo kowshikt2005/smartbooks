@@ -5,6 +5,6 @@ export default function CustomersPage() {
 }
 
 export const metadata = {
-  title: 'Customers - SmartBooks',
-  description: 'Manage your customer database',
+  title: 'Contacts - SmartBooks',
+  description: 'Manage your contact database',
 };

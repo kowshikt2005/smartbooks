@@ -39,9 +39,26 @@ export interface Database {
         Insert: WhatsAppLogInsert;
         Update: WhatsAppLogUpdate;
       };
+      whatsapp_messages: {
+        Row: WhatsAppMessage;
+        Insert: WhatsAppMessageInsert;
+        Update: WhatsAppMessageUpdate;
+      };
+      whatsapp_templates: {
+        Row: WhatsAppTemplate;
+        Insert: WhatsAppTemplateInsert;
+        Update: WhatsAppTemplateUpdate;
+      };
+      whatsapp_campaigns: {
+        Row: WhatsAppCampaign;
+        Insert: WhatsAppCampaignInsert;
+        Update: WhatsAppCampaignUpdate;
+      };
     };
     Views: {
-      [_ in never]: never;
+      whatsapp_campaign_summary: {
+        Row: WhatsAppCampaignSummary;
+      };
     };
     Functions: {
       [_ in never]: never;
@@ -51,6 +68,10 @@ export interface Database {
       invoice_status: 'pending' | 'paid' | 'overdue' | 'cancelled';
       movement_type: 'in' | 'out' | 'adjustment';
       whatsapp_status: 'pending' | 'sent' | 'delivered' | 'failed';
+      whatsapp_message_type: 'text' | 'template' | 'media';
+      whatsapp_message_status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+      whatsapp_template_category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+      whatsapp_campaign_status: 'draft' | 'queued' | 'sending' | 'completed' | 'failed' | 'cancelled';
     };
   };
 }
@@ -72,63 +93,33 @@ export interface InvoiceItem {
   line_total: number;
 }
 
-// Customer Types - Updated Schema
+// Customer Types - Simplified Schema
 export interface Customer {
   id: string;
-  location: string | null;
-  grn_no: string | null;
-  grn_date: string | null;
-  month_year: string | null;
-  phone_no: string | null;
-  invoice_id: string | null;
-  invoice_num: string | null;
   name: string;
-  adjusted_amount: number;
-  tds: number;
-  paid_amount: number;
-  branding_adjustment: number;
-  balance_pays: number;
-  payment_date: string | null;
+  phone_no: string;
+  location: string | null;
+  invoice_id: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface CustomerInsert {
   id?: string;
-  location?: string | null;
-  grn_no?: string | null;
-  grn_date?: string | null;
-  month_year?: string | null;
-  phone_no?: string | null;
-  invoice_id?: string | null;
-  invoice_num?: string | null;
   name: string;
-  adjusted_amount?: number;
-  tds?: number;
-  paid_amount?: number;
-  branding_adjustment?: number;
-  balance_pays?: number;
-  payment_date?: string | null;
+  phone_no: string;
+  location?: string | null;
+  invoice_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface CustomerUpdate {
   id?: string;
-  location?: string | null;
-  grn_no?: string | null;
-  grn_date?: string | null;
-  month_year?: string | null;
-  phone_no?: string | null;
-  invoice_id?: string | null;
-  invoice_num?: string | null;
   name?: string;
-  adjusted_amount?: number;
-  tds?: number;
-  paid_amount?: number;
-  branding_adjustment?: number;
-  balance_pays?: number;
-  payment_date?: string | null;
+  phone_no?: string;
+  location?: string | null;
+  invoice_id?: string | null;
   updated_at?: string;
 }
 
@@ -380,6 +371,162 @@ export type Tables<T extends keyof Database['public']['Tables']> = Database['pub
 export type Inserts<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert'];
 export type Updates<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update'];
 
+// WhatsApp Messages Types
+export interface WhatsAppMessage {
+  id: string;
+  customer_id: string | null;
+  phone_number: string;
+  message_content: string;
+  whatsapp_message_id: string | null;
+  campaign_id: string | null;
+  message_type: 'text' | 'template' | 'media';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  error_message: string | null;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WhatsAppMessageInsert {
+  id?: string;
+  customer_id?: string | null;
+  phone_number: string;
+  message_content: string;
+  whatsapp_message_id?: string | null;
+  campaign_id?: string | null;
+  message_type?: 'text' | 'template' | 'media';
+  status?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  error_message?: string | null;
+  sent_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WhatsAppMessageUpdate {
+  id?: string;
+  customer_id?: string | null;
+  phone_number?: string;
+  message_content?: string;
+  whatsapp_message_id?: string | null;
+  campaign_id?: string | null;
+  message_type?: 'text' | 'template' | 'media';
+  status?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  error_message?: string | null;
+  sent_at?: string | null;
+  updated_at?: string;
+}
+
+// WhatsApp Templates Types
+export interface WhatsAppTemplate {
+  id: string;
+  name: string;
+  display_name: string;
+  body_content: string;
+  variables: string[]; // JSON array of variable names
+  is_active: boolean;
+  category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+  language: string;
+  header_content: string | null;
+  footer_content: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WhatsAppTemplateInsert {
+  id?: string;
+  name: string;
+  display_name: string;
+  body_content: string;
+  variables?: string[];
+  is_active?: boolean;
+  category?: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+  language?: string;
+  header_content?: string | null;
+  footer_content?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WhatsAppTemplateUpdate {
+  id?: string;
+  name?: string;
+  display_name?: string;
+  body_content?: string;
+  variables?: string[];
+  is_active?: boolean;
+  category?: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+  language?: string;
+  header_content?: string | null;
+  footer_content?: string | null;
+  updated_at?: string;
+}
+
+// WhatsApp Campaigns Types
+export interface WhatsAppCampaign {
+  id: string;
+  name: string;
+  template_name: string | null;
+  total_recipients: number;
+  status: 'draft' | 'queued' | 'sending' | 'completed' | 'failed' | 'cancelled';
+  created_by: string | null;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  description: string | null;
+  target_criteria: Record<string, any>; // JSONB object
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WhatsAppCampaignInsert {
+  id?: string;
+  name: string;
+  template_name?: string | null;
+  total_recipients?: number;
+  status?: 'draft' | 'queued' | 'sending' | 'completed' | 'failed' | 'cancelled';
+  created_by?: string | null;
+  scheduled_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  description?: string | null;
+  target_criteria?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WhatsAppCampaignUpdate {
+  id?: string;
+  name?: string;
+  template_name?: string | null;
+  total_recipients?: number;
+  status?: 'draft' | 'queued' | 'sending' | 'completed' | 'failed' | 'cancelled';
+  created_by?: string | null;
+  scheduled_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  description?: string | null;
+  target_criteria?: Record<string, any>;
+  updated_at?: string;
+}
+
+// WhatsApp Campaign Summary View Type
+export interface WhatsAppCampaignSummary {
+  id: string;
+  name: string;
+  template_name: string | null;
+  total_recipients: number;
+  status: 'draft' | 'queued' | 'sending' | 'completed' | 'failed' | 'cancelled';
+  created_by: string | null;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  messages_sent: number;
+  messages_delivered: number;
+  messages_read: number;
+  messages_failed: number;
+}
+
 // Export all table types for convenience
 export type {
   Customer,
@@ -403,4 +550,14 @@ export type {
   WhatsAppLog,
   WhatsAppLogInsert,
   WhatsAppLogUpdate,
+  WhatsAppMessage,
+  WhatsAppMessageInsert,
+  WhatsAppMessageUpdate,
+  WhatsAppTemplate,
+  WhatsAppTemplateInsert,
+  WhatsAppTemplateUpdate,
+  WhatsAppCampaign,
+  WhatsAppCampaignInsert,
+  WhatsAppCampaignUpdate,
+  WhatsAppCampaignSummary,
 };

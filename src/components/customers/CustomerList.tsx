@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import {
   createColumnHelper,
 
@@ -13,7 +14,7 @@ import {
   SortingState,
   ColumnFiltersState,
 } from '@tanstack/react-table';
-import { MagnifyingGlassIcon, EyeIcon, HomeIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, EyeIcon, HomeIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { ProtectedRoute } from '../auth/ProtectedRoute';
 import { DashboardLayout } from '../layout';
 import Button from '../ui/Button';
@@ -35,6 +36,8 @@ export function CustomerList({ onView }: CustomerListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
 
   // Column helper for type safety
   const columnHelper = createColumnHelper<Customer>();
@@ -48,13 +51,121 @@ export function CustomerList({ onView }: CustomerListProps) {
     }
   };
 
+  const handleEdit = (customer: Customer) => {
+    router.push(`/customers/${customer.id}/edit`);
+  };
+
+  const handleDelete = async (customer: Customer) => {
+    const confirmed = confirm(
+      `Are you sure you want to delete contact "${customer.name}"? This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      await CustomerService.delete(customer.id);
+      setCustomers(customers.filter(c => c.id !== customer.id));
+      toast.success(`Contact "${customer.name}" has been deleted successfully.`);
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      toast.error('Failed to delete contact. Please try again.');
+    }
+  };
+
+  const handleCreateNew = () => {
+    router.push('/customers/new');
+  };
+
+  // Handle selection of individual customers
+  const handleSelectCustomer = (customerId: string, checked: boolean) => {
+    const newSelected = new Set(selectedCustomers);
+    if (checked) {
+      newSelected.add(customerId);
+    } else {
+      newSelected.delete(customerId);
+    }
+    setSelectedCustomers(newSelected);
+    
+    // Update select all state
+    setSelectAll(newSelected.size === customers.length && customers.length > 0);
+  };
+
+  // Handle select all functionality
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allCustomerIds = customers.map(customer => customer.id);
+      setSelectedCustomers(new Set(allCustomerIds));
+    } else {
+      setSelectedCustomers(new Set());
+    }
+    setSelectAll(checked);
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedCustomers.size === 0) {
+      toast.error('Please select contacts to delete');
+      return;
+    }
+
+    const selectedCustomerNames = customers
+      .filter(customer => selectedCustomers.has(customer.id))
+      .map(customer => customer.name);
+
+    const confirmed = confirm(
+      `Are you sure you want to delete ${selectedCustomers.size} contact(s)?\n\n` +
+      `Contacts to be deleted:\n${selectedCustomerNames.join('\n')}\n\n` +
+      `This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const selectedIds = Array.from(selectedCustomers);
+      await CustomerService.deleteMultiple(selectedIds);
+      
+      // Remove deleted customers from the list
+      setCustomers(customers.filter(customer => !selectedCustomers.has(customer.id)));
+      setSelectedCustomers(new Set());
+      setSelectAll(false);
+      
+      toast.success(`Successfully deleted ${selectedIds.length} contact(s)`);
+    } catch (error) {
+      console.error('Error deleting customers:', error);
+      toast.error('Failed to delete contacts. Please try again.');
+    }
+  };
+
 
 
   // Define table columns
   const columns = useMemo(
     () => [
+      columnHelper.display({
+        id: 'select',
+        header: ({ table }) => (
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              checked={selectAll}
+              onChange={(e) => handleSelectAll(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+          </div>
+        ),
+        cell: ({ row }) => (
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              checked={selectedCustomers.has(row.original.id)}
+              onChange={(e) => handleSelectCustomer(row.original.id, e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+          </div>
+        ),
+      }),
       columnHelper.accessor('name', {
-        header: 'Customer Name',
+        header: 'Contact Name',
         cell: (info) => (
           <div className="font-medium text-gray-900">
             {info.getValue()}
@@ -85,38 +196,6 @@ export function CustomerList({ onView }: CustomerListProps) {
           </div>
         ),
       }),
-      columnHelper.accessor('grn_no', {
-        header: 'GRN No',
-        cell: (info) => (
-          <div className="text-gray-600 font-mono text-sm">
-            {info.getValue() || '-'}
-          </div>
-        ),
-      }),
-      columnHelper.accessor('month_year', {
-        header: 'Month-Year',
-        cell: (info) => (
-          <div className="text-gray-600 text-sm">
-            {info.getValue() || '-'}
-          </div>
-        ),
-      }),
-      columnHelper.accessor('paid_amount', {
-        header: 'Paid Amount',
-        cell: (info) => (
-          <div className="text-green-600 font-medium">
-            ₹{info.getValue()?.toLocaleString('en-IN') || '0'}
-          </div>
-        ),
-      }),
-      columnHelper.accessor('balance_pays', {
-        header: 'Balance',
-        cell: (info) => (
-          <div className="text-red-600 font-medium">
-            ₹{info.getValue()?.toLocaleString('en-IN') || '0'}
-          </div>
-        ),
-      }),
       columnHelper.accessor('created_at', {
         header: 'Created',
         cell: (info) => (
@@ -135,14 +214,33 @@ export function CustomerList({ onView }: CustomerListProps) {
               size="sm"
               onClick={() => handleView(info.row.original)}
               icon={<EyeIcon className="h-4 w-4" />}
+              title="View contact details"
             >
               View
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEdit(info.row.original)}
+              icon={<PencilIcon className="h-4 w-4" />}
+              title="Edit contact"
+            >
+              Edit
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => handleDelete(info.row.original)}
+              icon={<TrashIcon className="h-4 w-4" />}
+              title="Delete contact"
+            >
+              Delete
             </Button>
           </div>
         ),
       }),
     ],
-    [handleView, columnHelper]
+    [handleView, handleEdit, handleDelete, handleSelectCustomer, handleSelectAll, selectedCustomers, selectAll, columnHelper]
   );
 
   // Load customers
@@ -155,8 +253,11 @@ export function CustomerList({ onView }: CustomerListProps) {
         orderDirection: 'asc',
       });
       setCustomers(result.data);
+      // Clear selection when customers are reloaded
+      setSelectedCustomers(new Set());
+      setSelectAll(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load customers');
+      setError(err instanceof Error ? err.message : 'Failed to load contacts');
     } finally {
       setLoading(false);
     }
@@ -189,10 +290,6 @@ export function CustomerList({ onView }: CustomerListProps) {
       },
     },
   });
-
-  const handleCreateNew = () => {
-    router.push('/customers/new');
-  };
 
   if (loading) {
     return (
@@ -234,8 +331,8 @@ export function CustomerList({ onView }: CustomerListProps) {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-              <p className="text-gray-600">Manage your customer database</p>
+              <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
+              <p className="text-gray-600">Manage your contact database</p>
             </div>
             <div className="flex space-x-3">
               <Button
@@ -245,7 +342,22 @@ export function CustomerList({ onView }: CustomerListProps) {
               >
                 Dashboard
               </Button>
-              {/* Create customer option removed as per requirements */}
+              {selectedCustomers.size > 0 && (
+                <Button
+                  variant="danger"
+                  onClick={handleBulkDelete}
+                  icon={<TrashIcon className="h-5 w-5" />}
+                >
+                  Delete Selected ({selectedCustomers.size})
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                onClick={handleCreateNew}
+                icon={<PlusIcon className="h-5 w-5" />}
+              >
+                Create Contact
+              </Button>
             </div>
           </div>
 
@@ -255,7 +367,7 @@ export function CustomerList({ onView }: CustomerListProps) {
           <div className="flex-1">
             <Input
               label=""
-              placeholder="Search customers by name, phone, or invoice details..."
+              placeholder="Search contacts by name, phone, or invoice details..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               icon={<MagnifyingGlassIcon className="h-5 w-5" />}
@@ -270,21 +382,26 @@ export function CustomerList({ onView }: CustomerListProps) {
           <DataTable
             table={table}
             loading={loading}
-            emptyMessage="No customers found"
+            emptyMessage="No contacts found"
           />
         </div>
 
         {/* Pagination */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-700">
               Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
               {Math.min(
                 (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
                 table.getFilteredRowModel().rows.length
               )}{' '}
-              of {table.getFilteredRowModel().rows.length} customers
+              of {table.getFilteredRowModel().rows.length} contacts
             </span>
+            {selectedCustomers.size > 0 && (
+              <span className="text-sm text-blue-600 font-medium">
+                {selectedCustomers.size} contact{selectedCustomers.size !== 1 ? 's' : ''} selected
+              </span>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <Button

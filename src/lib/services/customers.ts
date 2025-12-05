@@ -19,7 +19,7 @@ export class CustomerService {
 
       // Apply search filter
       if (options?.search) {
-        query = query.or(`name.ilike.%${options.search}%,phone_no.ilike.%${options.search}%,invoice_id.ilike.%${options.search}%,invoice_num.ilike.%${options.search}%`);
+        query = query.or(`name.ilike.%${options.search}%,phone_no.ilike.%${options.search}%,invoice_id.ilike.%${options.search}%`);
       }
 
       // Apply ordering
@@ -78,11 +78,101 @@ export class CustomerService {
   }
 
   /**
-   * Create a new customer - DISABLED as per requirements
+   * Search customers by name (exact and fuzzy matching)
    */
-  static async create(customer: CustomerInsert) {
-    throw new Error('Creating new customers is not allowed in this system');
+  static async searchByName(name: string): Promise<Customer[]> {
+    try {
+      const trimmedName = name.trim();
+      
+      // First try exact match (case-insensitive)
+      const { data: exactMatches, error: exactError } = await supabase
+        .from('customers')
+        .select('*')
+        .ilike('name', trimmedName)
+        .order('name');
+
+      if (exactError) {
+        throw new Error(handleSupabaseError(exactError));
+      }
+
+      // If we have exact matches, return them
+      if (exactMatches && exactMatches.length > 0) {
+        return exactMatches;
+      }
+
+      // If no exact matches, try fuzzy search
+      const { data: fuzzyMatches, error: fuzzyError } = await supabase
+        .from('customers')
+        .select('*')
+        .ilike('name', `%${trimmedName}%`)
+        .order('name')
+        .limit(10); // Limit fuzzy results
+
+      if (fuzzyError) {
+        throw new Error(handleSupabaseError(fuzzyError));
+      }
+
+      return fuzzyMatches || [];
+    } catch (error) {
+      console.error('Error searching customers by name:', error);
+      throw error;
+    }
   }
+
+  /**
+   * Get customers with phone numbers that match a name pattern
+   */
+  static async getCustomersWithPhoneByName(name: string): Promise<Customer[]> {
+    try {
+      const trimmedName = name.trim();
+      
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .ilike('name', `%${trimmedName}%`)
+        .not('phone_no', 'is', null)
+        .neq('phone_no', '')
+        .order('name')
+        .limit(5);
+
+      if (error) {
+        throw new Error(handleSupabaseError(error));
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching customers with phone by name:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new customer
+   */
+  static async create(customer: CustomerInsert): Promise<Customer> {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .insert({
+          ...customer,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(handleSupabaseError(error));
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      throw error;
+    }
+  }
+
+
 
   /**
    * Update an existing customer
@@ -127,7 +217,26 @@ export class CustomerService {
   }
 
   /**
-   * Get customer with their current balance (using new schema)
+   * Delete multiple customers
+   */
+  static async deleteMultiple(ids: string[]): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .in('id', ids);
+
+      if (error) {
+        throw new Error(handleSupabaseError(error));
+      }
+    } catch (error) {
+      console.error('Error deleting multiple customers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customer with their current balance (simplified schema)
    */
   static async getWithBalance(id: string) {
     try {
@@ -136,8 +245,8 @@ export class CustomerService {
 
       return {
         ...customer,
-        current_balance: customer.balance_pays || 0,
-        outstanding_amount: customer.balance_pays || 0
+        current_balance: 0,
+        outstanding_amount: 0
       };
     } catch (error) {
       console.error('Error fetching customer with balance:', error);
@@ -152,8 +261,8 @@ export class CustomerService {
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, phone_no, invoice_id, invoice_num')
-        .or(`name.ilike.%${query}%,phone_no.ilike.%${query}%,invoice_id.ilike.%${query}%,invoice_num.ilike.%${query}%`)
+        .select('id, name, phone_no, invoice_id')
+        .or(`name.ilike.%${query}%,phone_no.ilike.%${query}%,invoice_id.ilike.%${query}%`)
         .limit(limit);
 
       if (error) {
@@ -168,14 +277,13 @@ export class CustomerService {
   }
 
   /**
-   * Get customers with outstanding balances
+   * Get customers with outstanding balances (simplified - returns all customers)
    */
   static async getWithOutstandingBalances() {
     try {
       const { data: customers, error } = await supabase
         .from('customers')
-        .select('*')
-        .gt('balance_pays', 0);
+        .select('*');
 
       if (error) {
         throw new Error(handleSupabaseError(error));
@@ -190,74 +298,18 @@ export class CustomerService {
 }
 
 /**
- * Calculate total financial amounts using new schema
+ * Calculate total financial amounts (simplified schema - returns zeros)
  */
 export async function calculateCustomerFinancials(customers?: any[]) {
   try {
-    // If customers array is provided, calculate from it
-    if (customers && customers.length > 0) {
-      let totalPaidAmount = 0;
-      let totalBalancePays = 0;
-      let totalAdjustedAmount = 0;
-      let totalTds = 0;
-
-      for (const customer of customers) {
-        totalPaidAmount += customer.paid_amount || 0;
-        totalBalancePays += customer.balance_pays || 0;
-        totalAdjustedAmount += customer.adjusted_amount || 0;
-        totalTds += customer.tds || 0;
-      }
-
-      return { 
-        totalPaidAmount, 
-        totalBalancePays, 
-        totalAdjustedAmount, 
-        totalTds,
-        // For backward compatibility
-        totalBankBalance: totalPaidAmount,
-        totalOutstanding: totalBalancePays
-      };
-    }
-
-    // Otherwise, use database aggregation for better performance
-    const { data, error } = await supabase
-      .from('customers')
-      .select('paid_amount, balance_pays, adjusted_amount, tds');
-
-    if (error) {
-      console.error('Error fetching customer financial data:', error);
-      return { 
-        totalPaidAmount: 0, 
-        totalBalancePays: 0, 
-        totalAdjustedAmount: 0, 
-        totalTds: 0,
-        totalBankBalance: 0,
-        totalOutstanding: 0
-      };
-    }
-
-    let totalPaidAmount = 0;
-    let totalBalancePays = 0;
-    let totalAdjustedAmount = 0;
-    let totalTds = 0;
-
-    if (data && data.length > 0) {
-      for (const customer of data) {
-        totalPaidAmount += customer.paid_amount || 0;
-        totalBalancePays += customer.balance_pays || 0;
-        totalAdjustedAmount += customer.adjusted_amount || 0;
-        totalTds += customer.tds || 0;
-      }
-    }
-
     return { 
-      totalPaidAmount, 
-      totalBalancePays, 
-      totalAdjustedAmount, 
-      totalTds,
+      totalPaidAmount: 0, 
+      totalBalancePays: 0, 
+      totalAdjustedAmount: 0, 
+      totalTds: 0,
       // For backward compatibility
-      totalBankBalance: totalPaidAmount,
-      totalOutstanding: totalBalancePays
+      totalBankBalance: 0,
+      totalOutstanding: 0
     };
   } catch (error) {
     console.error('Error calculating customer financials:', error);
@@ -295,7 +347,7 @@ export async function getDashboardStats() {
       };
     }
 
-    // Get financial totals
+    // Get financial totals (simplified - all zeros)
     const financials = await calculateCustomerFinancials();
 
     return {

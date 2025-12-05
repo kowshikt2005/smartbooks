@@ -108,6 +108,9 @@ jspm_packages/
 tmp/
 temp/
 
+# Test-generated Excel files
+test_statement_*.xlsx
+
 # Database files (if using local SQLite)
 *.db
 *.sqlite

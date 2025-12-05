@@ -11,8 +11,7 @@ export type { InputProps } from './Input';
 export { default as Select } from './Select';
 export type { SelectProps, SelectOption } from './Select';
 
-export { default as Table } from './Table';
-export type { TableProps } from './Table';
+// Table component removed - using DataTable instead
 
 export { default as Modal } from './Modal';
 export type { ModalProps } from './Modal';

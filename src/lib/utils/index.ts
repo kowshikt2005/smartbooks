@@ -162,3 +162,6 @@ export function isEmpty(obj: unknown): boolean {
   if (typeof obj === 'object') return Object.keys(obj).length === 0;
   return false;
 }
+
+// Export phone utilities from the new simplified customer matching system
+export * from './phoneUtils';

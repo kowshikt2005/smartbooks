@@ -6,19 +6,14 @@ import Link from 'next/link';
 import { 
   HomeIcon,
   UsersIcon,
-  CubeIcon,
   DocumentTextIcon,
-  ShoppingCartIcon,
-  ChartBarIcon,
-  CogIcon,
   ChatBubbleLeftRightIcon,
   Bars3Icon,
   XMarkIcon,
   BellIcon,
   MagnifyingGlassIcon,
   UserCircleIcon,
-  ChevronDownIcon,
-  ArchiveBoxIcon
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 // import { StockNotifications } from '../inventory/StockNotifications';
@@ -32,7 +27,7 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Customers', href: '/customers', icon: UsersIcon },
+  { name: 'Contacts', href: '/customers', icon: UsersIcon },
   { name: 'WhatsApp', href: '/whatsapp', icon: ChatBubbleLeftRightIcon },
 ];
 
@@ -182,31 +177,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <Bars3Icon className="h-6 w-6" />
               </button>
 
-              {/* Search */}
-              <div className="flex-1 flex justify-center px-2 lg:ml-6 lg:justify-start">
-                <div className="max-w-lg w-full lg:max-w-xs">
-                  <label htmlFor="search" className="sr-only">Search</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="search"
-                      name="search"
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="Search..."
-                      type="search"
-                    />
-                  </div>
-                </div>
-              </div>
+              {/* Spacer */}
+              <div className="flex-1"></div>
 
               {/* Right side */}
               <div className="flex items-center space-x-4">
-                {/* Notifications */}
-                <button className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-full">
-                  <BellIcon className="h-6 w-6" />
-                </button>
 
                 {/* User menu */}
                 <div className="relative" ref={userMenuRef}>
@@ -227,20 +202,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                           <div className="font-medium">{user?.email}</div>
                           <div className="text-xs text-gray-500">Signed in</div>
                         </div>
-                        <Link
-                          href="/profile"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          Your Profile
-                        </Link>
-                        <Link
-                          href="/settings"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          Settings
-                        </Link>
                         <button
                           onClick={() => {
                             setUserMenuOpen(false);

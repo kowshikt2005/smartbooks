@@ -148,6 +148,36 @@ export class DatabaseMigrator {
           id: '002',
           name: 'Seed Data',
           filename: '002_seed_data.sql'
+        },
+        {
+          id: '005',
+          name: 'Simplified Customer Schema',
+          filename: '005_simplified_customer_schema.sql'
+        },
+        {
+          id: '006',
+          name: 'Seed Simplified Customer Data',
+          filename: '006_seed_simplified_customer_data.sql'
+        },
+        {
+          id: '007',
+          name: 'WhatsApp Mappings Table',
+          filename: '007_whatsapp_mappings_table.sql'
+        },
+        {
+          id: '008',
+          name: 'WhatsApp Messages Table',
+          filename: '008_whatsapp_messages_table.sql'
+        },
+        {
+          id: '009',
+          name: 'WhatsApp Templates Table',
+          filename: '009_whatsapp_templates_table.sql'
+        },
+        {
+          id: '010',
+          name: 'WhatsApp Campaigns Table',
+          filename: '010_whatsapp_campaigns_table.sql'
         }
       ];
 
@@ -213,7 +243,7 @@ export class DatabaseMigrator {
       const executedMigrations = await this.getExecutedMigrations();
       const executedIds = new Set(executedMigrations.map(m => m.id));
 
-      const allMigrations = ['001', '002']; // Add new migration IDs here
+      const allMigrations = ['001', '002', '005', '006', '007', '008', '009', '010']; // Add new migration IDs here
       const pendingMigrations = allMigrations.filter(id => !executedIds.has(id));
 
       return {
@@ -238,6 +268,10 @@ export class DatabaseMigrator {
 
       // Drop all tables
       const dropTablesSQL = `
+        DROP TABLE IF EXISTS whatsapp_messages CASCADE;
+        DROP TABLE IF EXISTS whatsapp_campaigns CASCADE;
+        DROP TABLE IF EXISTS whatsapp_templates CASCADE;
+        DROP TABLE IF EXISTS whatsapp_mappings CASCADE;
         DROP TABLE IF EXISTS whatsapp_logs CASCADE;
         DROP TABLE IF EXISTS stock_movements CASCADE;
         DROP TABLE IF EXISTS ledger_entries CASCADE;
@@ -254,6 +288,7 @@ export class DatabaseMigrator {
         DROP TYPE IF EXISTS whatsapp_status CASCADE;
         
         -- Drop views
+        DROP VIEW IF EXISTS whatsapp_campaign_summary CASCADE;
         DROP VIEW IF EXISTS customer_balances CASCADE;
         DROP VIEW IF EXISTS low_stock_items CASCADE;
         DROP VIEW IF EXISTS overdue_invoices CASCADE;
@@ -297,7 +332,11 @@ export class DatabaseMigrator {
         'ledger_entries',
         'stock_movements',
         'tax_profiles',
-        'whatsapp_logs'
+        'whatsapp_logs',
+        'whatsapp_mappings',
+        'whatsapp_messages',
+        'whatsapp_templates',
+        'whatsapp_campaigns'
       ];
 
       for (const table of requiredTables) {
