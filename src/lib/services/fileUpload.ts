@@ -80,8 +80,6 @@ export class FileUploadService {
       };
     }
   }
-}
-
 
   /**
    * Clean up old files from Vercel Blob Storage

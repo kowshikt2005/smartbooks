@@ -1490,10 +1490,6 @@ export class WhatsAppCloudService {
       // Silent fail - DB tracking is secondary to actual message sending
     }
   }
-}
-
-// Export singleton instance
-export const whatsappCloudService = WhatsAppCloudService.getInstance();
 
   /**
    * Send document (Excel, PDF, etc.) via WhatsApp Cloud API
@@ -1614,3 +1610,7 @@ export const whatsappCloudService = WhatsAppCloudService.getInstance();
       };
     }
   }
+}
+
+// Export singleton instance
+export const whatsappCloudService = WhatsAppCloudService.getInstance();
