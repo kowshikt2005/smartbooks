@@ -505,7 +505,7 @@ const WhatsAppPage: React.FC = () => {
         });
       }
       
-      message += `\nThank you!\nSmartBooks Team`;
+      message += `\nThank you!\nKSolutions Team`;
       return message;
     } else {
       // Calculate total by summing balance from all records
@@ -518,7 +518,7 @@ const WhatsAppPage: React.FC = () => {
         const amount = getBalanceAmount(customer);
         message += `${index + 1}. ${customer.name}: ₹${amount.toLocaleString('en-IN')}\n`;
       });
-      message += `\nTotal: ₹${totalOutstanding.toLocaleString('en-IN')}\n\nThank you!\nSmartBooks Team`;
+      message += `\nTotal: ₹${totalOutstanding.toLocaleString('en-IN')}\n\nThank you!\nKSolutions Team`;
       return message;
     }
   }, [getBalanceAmount]);
@@ -759,7 +759,7 @@ This is a friendly reminder regarding your payment:
 Thank you for your business!
 
 Best regards,
-SmartBooks Team`;
+KSolutions Team`;
     } else {
       // Multiple customers with same phone - combine messages with dynamic fields
       const totalOutstanding = customersGroup.reduce((sum, customer) => {
@@ -812,7 +812,7 @@ We would appreciate if you could make the payment at your earliest convenience.
 Thank you for your business!
 
 Best regards,
-SmartBooks Team`;
+KSolutions Team`;
     }
 
     // Clean and format the phone number
@@ -965,7 +965,7 @@ We would appreciate if you could make the payment at your earliest convenience.
 Thank you for your business!
 
 Best regards,
-SmartBooks Team`;
+KSolutions Team`;
         
         // Clean phone number
         let cleanPhone = phoneNumber.toString().replace(/[\s\-\(\)\+]/g, '');
@@ -1024,7 +1024,7 @@ We would appreciate if you could make the payment at your earliest convenience.
 Thank you for your business!
 
 Best regards,
-SmartBooks Team`;
+KSolutions Team`;
     } else {
       // Create the standard database message
       message = `Dear ${customer.name},
@@ -1053,7 +1053,7 @@ We would appreciate if you could make the payment at your earliest convenience.
 Thank you for your business!
 
 Best regards,
-SmartBooks Team`;
+KSolutions Team`;
     }
     
     // Show confirmation dialog only for single messages (not bulk)

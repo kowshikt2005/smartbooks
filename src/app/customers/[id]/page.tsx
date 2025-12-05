@@ -11,7 +11,7 @@ export default function CustomerPage({ params }: CustomerPageProps) {
 }
 
 export const metadata = {
-  title: 'Contact Details - SmartBooks',
+  title: 'Contact Details - KSolutions',
   description: 'View contact information and account details',
 };
 

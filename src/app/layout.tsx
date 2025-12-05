@@ -11,12 +11,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SmartBooks - Accounting & Inventory Management",
+  title: "KSolutions - Accounting & Inventory Management",
   description: "Comprehensive web-based accounting and inventory management application for small to medium businesses",
-  keywords: ["accounting", "inventory", "invoicing", "business management", "SmartBooks"],
-  authors: [{ name: "SmartBooks Team" }],
-  creator: "SmartBooks",
-  publisher: "SmartBooks",
+  keywords: ["accounting", "inventory", "invoicing", "business management", "KSolutions"],
+  authors: [{ name: "KSolutions Team" }],
+  creator: "KSolutions",
+  publisher: "KSolutions",
   robots: "index, follow",
   manifest: "/manifest.json",
   icons: {
@@ -26,14 +26,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://smartbooks.app",
-    title: "SmartBooks - Accounting & Inventory Management",
+    url: "https://ksolutions.app",
+    title: "KSolutions - Accounting & Inventory Management",
     description: "Comprehensive web-based accounting and inventory management application for small to medium businesses",
-    siteName: "SmartBooks",
+    siteName: "KSolutions",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SmartBooks - Accounting & Inventory Management",
+    title: "KSolutions - Accounting & Inventory Management",
     description: "Comprehensive web-based accounting and inventory management application for small to medium businesses",
   },
 };

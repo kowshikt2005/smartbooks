@@ -41,7 +41,7 @@ const LoginContent: React.FC = () => {
               />
             </svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">SmartBooks</h2>
+          <h2 className="text-3xl font-bold text-gray-900">KSolutions</h2>
           <p className="mt-2 text-gray-600">Accounting & Inventory Management</p>
         </div>
 
@@ -60,7 +60,7 @@ const LoginContent: React.FC = () => {
         {/* Footer */}
         <div className="text-center">
           <p className="text-sm text-gray-500">
-            © 2024 SmartBooks. All rights reserved.
+            © 2024 KSolutions. All rights reserved.
           </p>
         </div>
       </div>
