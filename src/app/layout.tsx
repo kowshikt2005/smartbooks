@@ -14,9 +14,9 @@ export const metadata: Metadata = {
   title: "KSolutions - Accounting & Inventory Management",
   description: "Comprehensive web-based accounting and inventory management application for small to medium businesses",
   keywords: ["accounting", "inventory", "invoicing", "business management", "KSolutions"],
-  authors: [{ name: "KSolutions Team" }],
-  creator: "KSolutions",
-  publisher: "KSolutions",
+  authors: [{ name: "Sri Balaji Enterprises Team" }],
+  creator: "Sri Balaji Enterprises",
+  publisher: "Sri Balaji Enterprises",
   robots: "index, follow",
   manifest: "/manifest.json",
   icons: {

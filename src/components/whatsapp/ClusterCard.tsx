@@ -314,7 +314,7 @@ const ContactRow: React.FC<ContactRowProps> = ({
                       }
                       
                       message += `\nPlease make the payment at your earliest convenience.\n\n`;
-                      message += `Thank you!\nKSolutions Team`;
+                      message += `Thank you!\nSri Balaji Enterprises Team`;
                       
                       await sendWhatsAppMessage({
                         to: contact.phone_no,
@@ -667,7 +667,7 @@ const ClusterCard: React.FC<ClusterCardProps> = ({
                             }
                             
                             message += `\nPlease make the payment at your earliest convenience.\n\n`;
-                            message += `Thank you!\nKSolutions Team`;
+                            message += `Thank you!\nSri Balaji Enterprises Team`;
                             
                             await sendWhatsAppMessage({
                               to: cluster.primaryPhone,
