@@ -629,32 +629,36 @@ const WhatsAppPage: React.FC = () => {
     setSendingMessage(true);
 
     if (messagingMode === 'cloud') {
-      // Cloud API mode - send via API
+      // Cloud API mode - send statements with Excel attachments
       let successCount = 0;
       let failCount = 0;
       const errors: string[] = [];
 
       for (const [phone, customersGroup] of customersByPhone) {
-        const message = buildBulkMessage(customersGroup);
-        
         try {
-          // Use Web mode for bulk sends to preserve message formatting
-          // Cloud API requires templates which don't support dynamic multi-line messages
-          await sendWhatsAppMessage({
-            to: phone,
-            message: message,
-            mode: 'web', // Force web mode for proper formatting
-            onSuccess: () => {
-              successCount++;
-            },
-            onError: (error) => {
-              failCount++;
-              errors.push(`${customersGroup[0].name}: ${error}`);
-            }
+          // Send statement with Excel attachment via Cloud API
+          const response = await fetch('/api/whatsapp/send-statement', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customerId: customersGroup[0].id,
+              customerName: customersGroup[0].name,
+              phoneNumber: phone,
+              records: customersGroup
+            })
           });
 
+          const result = await response.json();
+
+          if (result.success) {
+            successCount++;
+          } else {
+            failCount++;
+            errors.push(`${customersGroup[0].name}: ${result.error}`);
+          }
+
           // Rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (error) {
           failCount++;
           errors.push(`${customersGroup[0].name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -1089,41 +1093,27 @@ Sri Balaji Enterprises Team`;
       try {
         setSendingMessage(true);
         
-        // Get amount from customer data
-        const amount = customer.originalData?.Outstanding || customer.originalData?.outstanding || 
-                      customer.originalData?.Total || customer.originalData?.total ||
-                      customer.originalData?.Balance || customer.originalData?.balance ||
-                      customer.balance_pays || 0;
-        
-        // Get invoice ID
-        const invoiceId = customer.invoice_id || customer.originalData?.invoice_id || 
-                         customer.originalData?.['Invoice ID'] || 'N/A';
-        
-        // Use template for Cloud API
-        const response = await fetch('/api/whatsapp/send-message', {
+        // Send statement with Excel attachment via Cloud API
+        const response = await fetch('/api/whatsapp/send-statement', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            to: cleanPhone,
-            templateName: 'payment_reminder',
-            templateParams: {
-              body_1: customer.name, // Customer name
-              body_2: amount.toString(), // Amount
-              body_3: invoiceId // Invoice
-            }
+            customerId: customer.id,
+            customerName: customer.name,
+            phoneNumber: cleanPhone,
+            records: [customer]
           })
         });
 
         const result = await response.json();
 
         if (result.success) {
-          alert(`✅ Message sent successfully via WhatsApp Cloud API!\n\nMessage ID: ${result.messageId}\nTo: ${result.to}`);
+          alert(`✅ Statement sent!\n\nTotal: ₹${result.totalOutstanding.toLocaleString('en-IN')}`);
         } else {
-          alert(`❌ Failed to send message: ${result.error}\n\nPlease try again or switch to WhatsApp Web mode.`);
+          alert(`❌ Failed: ${result.error}`);
         }
       } catch (error) {
-        console.error('Error sending message:', error);
-        alert('❌ Error sending message. Please check your internet connection and try again.');
+        alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setSendingMessage(false);
       }

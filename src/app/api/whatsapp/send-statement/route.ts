@@ -62,10 +62,10 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 4. Send summary message (template)
+    // 4. Send summary message (template) with download link
     const summaryText = totalRecords === 1
-      ? `You have 1 transaction. Outstanding: ₹${totalOutstanding.toLocaleString('en-IN')}`
-      : `You have ${totalRecords} transactions. Total outstanding: ₹${totalOutstanding.toLocaleString('en-IN')}`;
+      ? `You have 1 transaction. Outstanding: ₹${totalOutstanding.toLocaleString('en-IN')}. Download statement: ${uploadResult.url}`
+      : `You have ${totalRecords} transactions. Total outstanding: ₹${totalOutstanding.toLocaleString('en-IN')}. Download: ${uploadResult.url}`;
 
     const summaryResult = await whatsappCloudService.sendTemplateMessage(
       phoneNumber,
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       {
         body_1: customerName,
         body_2: summaryText,
-        body_3: 'Please check attached statement for details.'
+        body_3: 'sri balaji enterprises'
       }
     );
 

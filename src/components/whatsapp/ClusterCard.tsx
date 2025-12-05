@@ -246,52 +246,32 @@ const ContactRow: React.FC<ContactRowProps> = ({
                   onClick={async () => {
                     const mode = getMessagingMode();
                     const amount = getOutstandingAmount(contact);
-                    const invoiceId = contact.invoice_id || contact.originalData?.invoice_id || contact.originalData?.['Invoice ID'] || 'N/A';
                     
                     if (mode === 'cloud') {
-                      // Use template for Cloud API
+                      // Cloud API mode - Send statement with Excel attachment
                       try {
-                        // Build clean message data for template
-                        const contactName = contact.name;
-                        const transactionDetails = [];
-                        
-                        if (contact.originalData) {
-                          // Extract key fields from Excel data
-                          if (contact.originalData['Contacts']) transactionDetails.push(`Contacts: ${contact.originalData['Contacts']}`);
-                          if (contact.originalData['Date']) transactionDetails.push(`Date: ${contact.originalData['Date']}`);
-                          if (contact.originalData['Trans#']) transactionDetails.push(`Trans#: ${contact.originalData['Trans#']}`);
-                          if (contact.originalData['Balance']) transactionDetails.push(`Balance: ₹${contact.originalData['Balance'].toLocaleString('en-IN')}`);
-                        } else {
-                          if (invoiceId && invoiceId !== 'N/A') transactionDetails.push(`Invoice: ${invoiceId}`);
-                          transactionDetails.push(`Amount: ₹${amount.toLocaleString('en-IN')}`);
-                        }
-                        
-                        const detailsText = transactionDetails.join(' ');
-                        
-                        const response = await fetch('/api/whatsapp/send-message', {
+                        const response = await fetch('/api/whatsapp/send-statement', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
-                            to: contact.phone_no,
-                            templateName: 'payment_reminder',
-                            templateParams: {
-                              body_1: contactName,
-                              body_2: detailsText,
-                              body_3: 'sri balaji enterprises'
-                            }
+                            customerId: contact.id,
+                            customerName: contact.name,
+                            phoneNumber: contact.phone_no,
+                            records: [contact]
                           })
                         });
                         
                         const result = await response.json();
                         
                         if (result.success) {
-                          alert(`✅ Message sent!\nMessage ID: ${result.messageId}`);
+                          alert(`✅ Statement sent!\n\nTotal: ₹${result.totalOutstanding.toLocaleString('en-IN')}`);
                         } else {
                           alert(`❌ Failed: ${result.error}`);
                         }
                       } catch (error) {
                         alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
                       }
+                      return;
                     } else {
                       // WhatsApp Web mode - use free-form message
                       let message = `Dear ${contact.name},\n\n`;
@@ -576,56 +556,30 @@ const ClusterCard: React.FC<ClusterCardProps> = ({
                           const mode = getMessagingMode();
                           
                           if (mode === 'cloud') {
-                            // Use template for Cloud API
+                            // Cloud API mode - Send statement with Excel attachment
                             try {
-                              // Build transaction details for template
-                              const transactionDetails = [];
-                              
-                              cluster.contacts.forEach((contact, index) => {
-                                if (contact.originalData) {
-                                  // Use Excel data
-                                  const trans = contact.originalData['Trans#'] || contact.originalData['Invoice ID'] || `Entry ${index + 1}`;
-                                  const amount = contact.originalData['Balance'] || contact.originalData['Outstanding'] || 0;
-                                  const date = contact.originalData['Date'] || '';
-                                  
-                                  if (date) {
-                                    transactionDetails.push(`${trans} (${date}): ₹${amount.toLocaleString('en-IN')}`);
-                                  } else {
-                                    transactionDetails.push(`${trans}: ₹${amount.toLocaleString('en-IN')}`);
-                                  }
-                                } else {
-                                  const trans = contact.invoice_id || `Entry ${index + 1}`;
-                                  const amount = contact.balance_pays || 0;
-                                  transactionDetails.push(`${trans}: ₹${amount.toLocaleString('en-IN')}`);
-                                }
-                              });
-                              
-                              const detailsText = transactionDetails.join(' | ');
-                              
-                              const response = await fetch('/api/whatsapp/send-message', {
+                              const response = await fetch('/api/whatsapp/send-statement', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                  to: cluster.primaryPhone,
-                                  templateName: 'payment_reminder',
-                                  templateParams: {
-                                    body_1: cluster.name,
-                                    body_2: detailsText,
-                                    body_3: 'sri balaji enterprises'
-                                  }
+                                  customerId: cluster.id,
+                                  customerName: cluster.name,
+                                  phoneNumber: cluster.primaryPhone,
+                                  records: cluster.contacts
                                 })
                               });
                               
                               const result = await response.json();
                               
                               if (result.success) {
-                                alert(`✅ Message sent via Cloud API!\nMessage ID: ${result.messageId}`);
+                                alert(`✅ Statement sent!\n\n${result.totalRecords} record(s)\nTotal: ₹${result.totalOutstanding.toLocaleString('en-IN')}`);
                               } else {
                                 alert(`❌ Failed: ${result.error}`);
                               }
                             } catch (error) {
                               alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
                             }
+                            return;
                           } else {
                             // WhatsApp Web mode - use free-form message
                             let message = `Dear ${cluster.name},\n\n`;

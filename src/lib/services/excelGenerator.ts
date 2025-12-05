@@ -80,6 +80,7 @@ export class ExcelGenerator {
   static generateCustomerStatement(
     customerName: string,
     records: Array<{
+      originalData?: Record<string, any>;
       [key: string]: any;
     }>
   ): Buffer {
@@ -94,12 +95,15 @@ export class ExcelGenerator {
       ['']
     ];
     
+    // Extract originalData from records (this is where the Excel data is stored)
+    const flatRecords = records.map(record => record.originalData || record);
+    
     // Get all unique keys from records (preserve Excel column order)
     const allKeys = new Set<string>();
-    records.forEach(record => {
+    flatRecords.forEach(record => {
       Object.keys(record).forEach(key => {
-        // Skip internal fields
-        if (key !== 'rowNumber' && key !== 'id' && key !== 'phone_no' && key !== 'name') {
+        // Skip internal/system fields
+        if (key !== 'rowNumber' && key !== 'id' && key !== 'phone_no' && key !== 'name' && key !== 'created_at' && key !== 'updated_at') {
           allKeys.add(key);
         }
       });
@@ -110,22 +114,21 @@ export class ExcelGenerator {
     data.push(headers);
     
     // Add data rows
-    records.forEach(record => {
+    flatRecords.forEach(record => {
       const row = headers.map(header => {
         const value = record[header];
         
-        // Format numbers as currency if they look like amounts
+        // Keep numbers as numbers for Excel formatting
         if (typeof value === 'number') {
-          const headerLower = header.toLowerCase();
-          if (headerLower.includes('balance') || 
-              headerLower.includes('amount') || 
-              headerLower.includes('outstanding') ||
-              headerLower.includes('due')) {
-            return value; // Keep as number for Excel formatting
-          }
+          return value;
         }
         
-        return value || '';
+        // Format dates
+        if (value instanceof Date) {
+          return value.toLocaleDateString('en-IN');
+        }
+        
+        return value !== null && value !== undefined ? value : '';
       });
       data.push(row);
     });
@@ -133,7 +136,7 @@ export class ExcelGenerator {
     // Calculate totals for numeric columns
     const totals: any[] = [];
     headers.forEach((header, index) => {
-      const values = records.map(r => r[header]).filter(v => typeof v === 'number');
+      const values = flatRecords.map(r => r[header]).filter(v => typeof v === 'number');
       if (values.length > 0) {
         const sum = values.reduce((a, b) => a + b, 0);
         totals[index] = sum;
@@ -157,7 +160,7 @@ export class ExcelGenerator {
       if (headerLower.includes('date')) return { wch: 12 };
       if (headerLower.includes('trans') || headerLower.includes('invoice')) return { wch: 15 };
       if (headerLower.includes('contact') || headerLower.includes('name')) return { wch: 25 };
-      if (headerLower.includes('balance') || headerLower.includes('amount')) return { wch: 15 };
+      if (headerLower.includes('balance') || headerLower.includes('amount') || headerLower.includes('outstanding')) return { wch: 15 };
       return { wch: 15 };
     });
     
